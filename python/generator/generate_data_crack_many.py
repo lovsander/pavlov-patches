@@ -17,13 +17,11 @@ try:
 except Exception:
     pass
 
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
-
 
 # ============ ПАРАМЕТРЫ ============
 N_POINTS_PER_SECTION = 6000   # точек на одно сечение (на оборот)
@@ -51,7 +49,6 @@ TOTAL_HEIGHT = None
 if TOTAL_HEIGHT is None:
     TOTAL_HEIGHT = (N_SECTIONS - 1) * HEIGHT_STEP
 
-
 # ============ ТРЕЩИНЫ (список) ============
 # Каждая трещина:
 #   angle_bottom, angle_top — угол центра в нижнем/верхнем сечении
@@ -77,7 +74,6 @@ CRACKS = [
 
 CRACK_PROFILE = 'gauss'  # 'gauss' или 'triangle'
 
-
 def crack_profile(angles_deg, height_mm, total_height, crack):
     """
     Профиль одной трещины с интерполяцией параметров по высоте.
@@ -101,14 +97,12 @@ def crack_profile(angles_deg, height_mm, total_height, crack):
         delta = np.zeros_like(angles_deg)
     return delta
 
-
 def all_cracks_profile(angles_deg, height_mm, total_height):
     """Суммарный профиль всех трещин."""
     delta = np.zeros_like(angles_deg)
     for crack in CRACKS:
         delta += crack_profile(angles_deg, height_mm, total_height, crack)
     return delta
-
 
 def ideal_radius(angle_rad, height_mm, angles_deg, total_height):
     if SHAPE == 'cylinder':
@@ -129,7 +123,6 @@ def ideal_radius(angle_rad, height_mm, angles_deg, total_height):
 
     r_ell = r_ell + all_cracks_profile(angles_deg, height_mm, total_height)
     return r_ell
-
 
 def generate_section(section_id, height_mm):
     angles_deg = np.linspace(0, 360, N_POINTS_PER_SECTION, endpoint=False)
@@ -172,7 +165,6 @@ def generate_section(section_id, height_mm):
         'is_outlier': is_outlier,
     })
 
-
 # ============ ГЕНЕРАЦИЯ ============
 np.random.seed(42)
 
@@ -194,7 +186,6 @@ for j, c in enumerate(CRACKS):
     print(f"    Угол:    {c['angle_bottom']}° → {c['angle_top']}°")
     print(f"    Ширина:  {c['width_bottom']}° → {c['width_top']}°")
     print(f"    Глубина: {c['depth_bottom']} мм → {c['depth_top']} мм")
-
 
 # ============ ВИЗУАЛИЗАЦИЯ СЕЧЕНИЙ ============
 # Первое, среднее и последнее сечение — работает при любом N_SECTIONS

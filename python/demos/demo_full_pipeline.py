@@ -17,7 +17,6 @@ try:
 except Exception:
     pass
 
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -28,10 +27,8 @@ from appa.core.outlier_cleaner import OutlierCleaner
 from appa.core.patch_approximator import PatchApproximator
 from appa.core.crack_detector import CrackDetector
 
-
 # ============ ЗАГРУЗКА ============
 data = pd.read_csv('synthetic_data.csv')
-
 
 # ============ ОЧИСТКА ============
 cleaner = OutlierCleaner(threshold_deriv=0.5, mad_k=9.5, z_threshold=3.5)
@@ -51,7 +48,6 @@ for sid in data['section_id'].unique():
     n_out = sub['is_outlier_detected'].sum()
     print(f"  Сечение {sid}: выбросов {n_out}/{len(sub)}")
 
-
 # ============ ПАРАМЕТРЫ ============
 angles_grid = np.linspace(0, 360, 1440, endpoint=False)
 
@@ -61,7 +57,6 @@ detector = CrackDetector(
     min_width_deg=5.0,
     merge_gap_deg=15.0,
 )
-
 
 # ============ ПРОГОН ПО ВСЕМ СЕЧЕНИЯМ ============
 print("\n=== ПРОГОН ПО ВСЕМ СЕЧЕНИЯМ ===")
@@ -117,7 +112,6 @@ for sid in data['section_id'].unique():
     def_str = ", ".join([f"{d['angle_start']:.0f}°-{d['angle_end']:.0f}°"
                           for d in defects]) if defects else "нет"
     print(f"  Сечение {sid}: RMSE={rmse:.5f}, deg={approx.get_degrees()}, трещины: {def_str}")
-
 
 # ============ ОТРИСОВКА: ВСЕ СЕЧЕНИЯ 16:9 ============
 n_results = len(results)
@@ -185,10 +179,8 @@ plt.tight_layout()
 plt.savefig('pipeline_all_sections.png', dpi=120, bbox_inches='tight')
 print("\nГрафик: pipeline_all_sections.png")
 
-
 # ============ ГРАФИК ТРЕЩИН ПО ВЫСОТЕ ============
 fig2, (ax_depth, ax_width, ax_angle) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
-
 
 def group_defects_by_angle(all_defects, tol=30.0):
     groups = []
@@ -202,7 +194,6 @@ def group_defects_by_angle(all_defects, tol=30.0):
         if not placed:
             groups.append({'angle_mid': d['angle_mid'], 'items': [d]})
     return groups
-
 
 all_defects = []
 for res in results:

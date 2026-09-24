@@ -39,15 +39,10 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception:
     pass
-
 
 import numpy as np
 
@@ -64,10 +59,6 @@ from pathlib import Path
 from appa.core.outlier_cleaner import AutoOutlierCleaner, build_cleaner
 
 from appa.core.patch_approximator import PatchApproximator
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from appa.analysis.cleaner_study import evaluate_method, fmt, hampel_window_sweep, make_ctx, mean_or_none
 from appa.paths import resolve_path
 from appa.report.cleaner_report import print_section_report, print_summary
@@ -132,7 +123,6 @@ CONFIG = {
     "out_png": "cleaner_auto_report.png",
     "dpi": 120,
 }
-
 
 def ring_interp(angles, values, xq):
     """Интерполяция периодического профиля (кольцо 0..360) в точки xq."""

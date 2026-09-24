@@ -13,13 +13,11 @@ try:
 except Exception:
     pass
 
-
 import numpy as np
 import pandas as pd
 
 from appa.core.patch_approximator import PatchApproximator
 from appa.io.pmodel import load_model, save_model, summary, validate_model
-
 
 # ============ Загрузка и очистка ============
 data = pd.read_csv('synthetic_data.csv')
@@ -36,7 +34,6 @@ sec_clean = sec[~mask_out]
 angles = sec_clean['angle_deg'].values
 radii = sec_clean['radius_mm'].values
 print(f"Всего: {len(sec)}, чистых: {len(sec_clean)}")
-
 
 # ============ Обучение ============
 approx = PatchApproximator(
@@ -57,7 +54,6 @@ approx.statistics_['rmse_global_mm'] = rmse_global
 print(f"RMSE global: {rmse_global:.6f} мм")
 print(f"Степени патчей: {approx.get_degrees()}")
 
-
 # ============ Сохранение ============
 save_model(
     approx,
@@ -71,18 +67,15 @@ save_model(
 )
 print("Сохранено: section_0.pmodel.json")
 
-
 # ============ Валидация ============
 ok, errors = validate_model('section_0.pmodel.json')
 print(f"\nВалидация: {'OK' if ok else 'ОШИБКИ'}")
 for e in errors:
     print(f"  - {e}")
 
-
 # ============ Summary ============
 print()
 summary('section_0.pmodel.json')
-
 
 # ============ Загрузка и проверка ============
 loaded = load_model('section_0.pmodel.json')

@@ -35,15 +35,10 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception:
     pass
-
 
 import numpy as np
 
@@ -60,10 +55,6 @@ from pathlib import Path
 from appa.core.outlier_cleaner import build_cleaner
 
 from appa.core.patch_approximator import PatchApproximator
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from appa.analysis.model_scan import build_variant_config, evaluate_variant
 from appa.io.dataset import load_and_clean
 from appa.paths import resolve_path
@@ -155,7 +146,6 @@ CONFIG = {
     "show_residuals": True,        # второй график: невязка (fitted - ideal)
     "dpi": 120,
 }
-
 
 def main():
     cfg = CONFIG

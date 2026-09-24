@@ -56,10 +56,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-import sys
 
 import numpy as np
 
@@ -73,10 +69,6 @@ from appa.analysis.layout import fit_layout, layout_margins, section_crack_zones
 from appa.core.geometry import node_angles, patch_centers
 from appa.io.dataset import attach_ideal_grid, load_sections
 from appa.paths import resolve_path
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from appa.analysis.per_section_phase import search_phase, section_margins, section_rmse, shared_rmse_fn
 from appa.report.phase_report import report_compare, report_pits, report_zones
 from appa.viz.phase_figs import plot_phase_fits

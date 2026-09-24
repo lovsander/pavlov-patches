@@ -13,7 +13,6 @@ try:
 except Exception:
     pass
 
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -23,10 +22,8 @@ matplotlib.use('Agg')
 from appa.core.outlier_cleaner import OutlierCleaner
 from appa.core.patch_approximator import PatchApproximator
 
-
 # ============ ЗАГРУЗКА ============
 data = pd.read_csv('synthetic_data.csv')
-
 
 # ============ ОЧИСТКА (через класс) ============
 cleaner = OutlierCleaner(
@@ -56,7 +53,6 @@ for sid in data['section_id'].unique():
 
 cleaned = pd.concat(cleaned_list, ignore_index=True)
 
-
 # ============ ПОДГОТОВКА ============
 SID = 0
 sec_full = cleaned[cleaned['section_id'] == SID].copy()
@@ -68,7 +64,6 @@ radii_raw = sec_clean['radius_mm'].values
 sec_ideal = data[data['section_id'] == SID][['angle_deg', 'radius_ideal_mm']].copy()
 
 print(f"\nСечение {SID}: всего {len(sec_full)}, чистых {len(sec_clean)}")
-
 
 # ============ ОБУЧЕНИЕ ============
 print("\n=== ОБУЧЕНИЕ PatchApproximator ===")
@@ -88,7 +83,6 @@ degrees = approx.get_degrees()
 print(f"Степени: {degrees}")
 print(f"Суммарно коэффициентов: {sum(d + 1 for d in degrees)}")
 
-
 # ============ ВОССТАНОВЛЕНИЕ ============
 angles_grid = np.linspace(0, 360, 1440, endpoint=False)
 fitted = approx.eval(angles_grid)
@@ -105,7 +99,6 @@ print(f"RMSE:         {rmse:.5f} мм")
 print(f"MAE:          {mae:.5f} мм")
 print(f"Макс. ошибка: {max_err:.5f} мм")
 
-
 # ============ СОХРАНЕНИЕ / ЗАГРУЗКА ============
 model_path = f'model_pavlov_section{SID}.npz'
 approx.save(model_path)
@@ -114,7 +107,6 @@ print(f"\nМодель сохранена: {model_path}")
 approx_loaded = PatchApproximator.load(model_path)
 fitted_loaded = approx_loaded.eval(angles_grid)
 print(f"Воспроизведение: {np.allclose(fitted, fitted_loaded)}")
-
 
 # ============ ВИЗУАЛИЗАЦИЯ ============
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10),
@@ -179,7 +171,6 @@ ax2.set_xlim(0, 360)
 plt.tight_layout()
 plt.savefig('demo_full_pipeline.png', dpi=120)
 print(f"\nГрафик: demo_full_pipeline.png")
-
 
 # ============ ПРОГОН ПО ВСЕМ СЕЧЕНИЯМ ============
 print("\n=== ПРОГОН ПО ВСЕМ СЕЧЕНИЯМ ===")

@@ -33,15 +33,10 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception:
     pass
-
 
 import numpy as np
 
@@ -54,10 +49,6 @@ import matplotlib.pyplot as plt
 from appa.analysis.model_scan import make_approximator
 from appa.io.dataset import load_and_clean
 from appa.paths import resolve_path
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from appa.analysis.phase_study import aligned_phase, cyclic_dist, find_pits, outlier_mask, sweep_phase
 
 CONFIG = {

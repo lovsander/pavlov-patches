@@ -37,10 +37,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-import sys
 
 from pathlib import Path
 
@@ -57,10 +53,6 @@ import matplotlib.pyplot as plt
 from appa.core.outlier_cleaner import build_cleaner, median_filter_wrap, window_points
 
 from appa.analysis.zones import defect_maps, detect_zones, indicator_curve, load_crack_table, mask_to_zones, score_zones, truth_zone_mask
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from appa.analysis.defect_study import candidate_results, sweep_thresholds, truth_zones_by_section, window_metrics
 from appa.paths import resolve_path
 from appa.report.defect_report import report_candidates
@@ -130,7 +122,6 @@ CONFIG = {
     "out_candidates": "defect_indicator_candidates.png",
     "out_k_sweep": "defect_threshold_sweep.png",
 }
-
 
 def load_sections(csv_path, ideal_column, cleaner_cfg):
     """
