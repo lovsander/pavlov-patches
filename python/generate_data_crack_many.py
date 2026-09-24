@@ -1,8 +1,11 @@
 """
-generate_data.py
+generate_data_crack_many.py
 
 Генератор синтетических данных для аппроксимации и детекции трещин.
 Несколько трещин, каждая варьируется по высоте.
+
+N_POINTS_PER_SECTION точек создаётся для КАЖДОГО сечения, т.е. в файле
+получается N_POINTS_PER_SECTION * N_SECTIONS строк.
 """
 
 import numpy as np
@@ -11,9 +14,9 @@ import matplotlib.pyplot as plt
 
 
 # ============ ПАРАМЕТРЫ ============
-N_POINTS = 600
-N_SECTIONS = 10
-HEIGHT_STEP = 5.0
+N_POINTS_PER_SECTION = 6000   # точек на одно сечение (на оборот)
+N_SECTIONS = 10               # число сечений по высоте
+HEIGHT_STEP = 5.0             # шаг между сечениями, мм
 NOISE_STD = 0.1
 OUTLIER_RATE = 0.02
 OUTLIER_MIN = 0.5
@@ -27,6 +30,14 @@ WAVINESS_FREQ = 5
 CONE_ANGLE = 0.4
 TILT_X = 0.2
 TILT_Y = 0.03
+
+# Полная высота детали, по которой интерполируется профиль трещин, мм.
+# None -> (N_SECTIONS - 1) * HEIGHT_STEP, т.е. трещины развиваются по всей
+# сгенерированной высоте. Задайте число явно, если сечений меньше, чем в
+# полной детали, но геометрия трещин должна остаться прежней.
+TOTAL_HEIGHT = None
+if TOTAL_HEIGHT is None:
+    TOTAL_HEIGHT = (N_SECTIONS - 1) * HEIGHT_STEP
 
 
 # ============ ТРЕЩИНЫ (список) ============
@@ -109,9 +120,9 @@ def ideal_radius(angle_rad, height_mm, angles_deg, total_height):
 
 
 def generate_section(section_id, height_mm):
-    angles_deg = np.linspace(0, 360, N_POINTS, endpoint=False)
+    angles_deg = np.linspace(0, 360, N_POINTS_PER_SECTION, endpoint=False)
     angles_rad = np.deg2rad(angles_deg)
-    total_height = (N_SECTIONS - 1) * HEIGHT_STEP
+    total_height = TOTAL_HEIGHT
 
     r_ideal = np.array([
         ideal_radius(a, height_mm, ad, total_height)
@@ -121,11 +132,11 @@ def generate_section(section_id, height_mm):
     cx = TILT_X * height_mm
     cy = TILT_Y * height_mm
 
-    r_noisy = r_ideal + np.random.normal(0, NOISE_STD, N_POINTS)
+    r_noisy = r_ideal + np.random.normal(0, NOISE_STD, N_POINTS_PER_SECTION)
 
-    n_outliers = int(N_POINTS * OUTLIER_RATE)
-    outlier_idx = np.random.choice(N_POINTS, n_outliers, replace=False)
-    is_outlier = np.zeros(N_POINTS, dtype=bool)
+    n_outliers = int(N_POINTS_PER_SECTION * OUTLIER_RATE)
+    outlier_idx = np.random.choice(N_POINTS_PER_SECTION, n_outliers, replace=False)
+    is_outlier = np.zeros(N_POINTS_PER_SECTION, dtype=bool)
     is_outlier[outlier_idx] = True
     r_noisy[outlier_idx] += (
         np.random.choice([-1, 1], n_outliers)
@@ -161,7 +172,10 @@ for i in range(N_SECTIONS):
 data = pd.concat(sections, ignore_index=True)
 data.to_csv('synthetic_data.csv', index=False)
 
-print(f"Сгенерировано {len(data)} точек")
+print(f"Сечений: {N_SECTIONS} по {N_POINTS_PER_SECTION} точек "
+      f"(итого {len(data)} точек в файле)")
+print(f"Профиль трещин интерполируется по высоте {TOTAL_HEIGHT:g} мм "
+      f"с шагом сечений {HEIGHT_STEP:g} мм")
 print(f"Трещин: {len(CRACKS)}")
 for j, c in enumerate(CRACKS):
     print(f"  Трещина {j+1}:")
@@ -171,8 +185,11 @@ for j, c in enumerate(CRACKS):
 
 
 # ============ ВИЗУАЛИЗАЦИЯ СЕЧЕНИЙ ============
-SECTIONS_TO_SHOW = [0, 4, 9]
-fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+# Первое, среднее и последнее сечение — работает при любом N_SECTIONS
+# (при N_SECTIONS = 10 получается то же [0, 4, 9], что и раньше).
+SECTIONS_TO_SHOW = sorted({0, (N_SECTIONS - 1) // 2, N_SECTIONS - 1})
+fig, axes = plt.subplots(1, len(SECTIONS_TO_SHOW), figsize=(18, 6))
+axes = np.atleast_1d(axes).ravel()
 
 for ax, sid in zip(axes, SECTIONS_TO_SHOW):
     sec = data[data['section_id'] == sid]
