@@ -23,6 +23,7 @@ appa — Adaptive Poly-Patch Approximation (кодовая база «Pavlov pat
   studies/  — исследования (compare_*, explore_*)
   demos/    — демонстрации
   generator/— генератор синтетических данных
+  research/ — архив исследований и отклонённых гипотез (red flags метода)
 """
 
 from .core.crack_detector import CrackDetector
