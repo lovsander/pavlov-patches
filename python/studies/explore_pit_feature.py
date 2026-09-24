@@ -62,10 +62,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-import sys
 
 from pathlib import Path
 
@@ -77,15 +73,11 @@ matplotlib.use("Agg")             # только сохранение в фай�
 
 import matplotlib.pyplot as plt
 
-from appa.core.patch_approximator import PatchApproximator
+from appa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
 
 from appa.analysis.layout import section_crack_zones
 from appa.io.dataset import attach_ideal_grid, load_sections, ring_interp
 from appa.paths import resolve_path
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from appa.analysis.pit_study import fit_variant, measure, pit_crop_info
 from appa.report.pit_report import report_config, report_crops, report_metrics
 from appa.viz.pit_figs import VARIANTS, plot_pit_crops
@@ -109,10 +101,9 @@ CONFIG = {
                  "smooth_deg": 2.0, "k": 5.5, "min_zone_deg": 2.0},
 
     # --- параметры гауссовой ямы (оконной) ---
-    "sigma_deg": 3.0,         # полуширина ядра гаусса, ° (выбрана в §19 CONTEXT.md)
-    "pit_core_sigma": 2.0,    # при |d| <= 2*sigma вес = 1 (дно ямы не искажаем)
-    "pit_window_sigma": 3.2,  # при |d| = 3.2*sigma вес = 0 (выход в полином)
-    "pit_min_amp": 3e-3,      # гаусс слабее этого в окне патча не тратит параметр
+    # --- параметры фичера ямы: единый источник (appa.core.pit_feature) ---
+    # решение 2026-09-24: оконный гаусс 3.2σ при общей фазе (CONTEXT §25)
+    **PIT_DEFAULTS,
 
     # --- параметры модели (как в пайплайне) ---
     "model": {"deg_min": 4, "deg_max": 14, "amplitude_scale": 180.0,
@@ -130,6 +121,7 @@ CONFIG = {
 
 def main():
     cfg = CONFIG
+    validate_pit_cfg(cfg)                 # окно не уже ядра, σ > 0
     grid = np.linspace(0.0, 360.0, cfg["grid_points"], endpoint=False)
     sections = load_sections(resolve_path(cfg["csv"]), cfg["ideal_column"],
                              cfg["cleaner"])

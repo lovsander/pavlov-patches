@@ -12,6 +12,30 @@ import numpy as np
 
 from .patch_approximator import PatchApproximator
 
+# ЕДИНЫЙ ИСТОЧНИК параметров фичера ям. Решение 2026-09-24 (CONTEXT §25):
+# остаёмся на оконном гауссе 3.2σ при общей фазе раскладки — это проще и
+# надёжнее (одна раскладка на всё тело, прямые швы, паритет с C++ тривиален),
+# а альтернативы (окно 2.5σ, своя фаза «под ямы») эффекта по точности не дают.
+PIT_DEFAULTS = {
+    "sigma_deg": 3.0,          # полуширина ядра гаусса
+    "pit_core_sigma": 2.0,     # при |d| <= 2σ вес 1 (дно не искажаем)
+    "pit_window_sigma": 3.2,   # при |d| = 3.2σ вес ровно 0 (выход в базис)
+    "pit_min_amp": 3e-3,       # слабее этого гаусс в окне патча не тратит параметр
+    "tapering": True,          # False = чистый гаусс (только для сравнений)
+}
+
+
+def validate_pit_cfg(cfg):
+    """Проверка согласованности параметров фичера: окно не уже ядра, σ > 0."""
+    core = float(cfg["pit_core_sigma"]) * float(cfg["sigma_deg"])
+    win = float(cfg["pit_window_sigma"]) * float(cfg["sigma_deg"])
+    if float(cfg["sigma_deg"]) <= 0.0:
+        raise ValueError("sigma_deg должен быть > 0")
+    if win < core:
+        raise ValueError(f"окно фичера ({win:.2f}°) уже ядра ({core:.2f}°)")
+    return {"core_deg": core, "window_deg": win}
+
+
 
 def pit_shape_deg(delta_deg, sigma_deg=3.0, core_sigma=2.0, window_sigma=3.2,
                   tapering=True):
