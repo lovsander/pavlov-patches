@@ -6,7 +6,10 @@ compare_patch_counts.py
 
 Последовательность:
 1. Загрузка сечений из CSV.
-2. Очистка выбросов (OutlierCleaner).
+2. Очистка выбросов: CONFIG['cleaner'] собирается фабрикой build_cleaner().
+   mode="manual" — прежние пороги, заданные руками (по умолчанию);
+   mode="auto"   — пороги вычисляются по данным (AutoOutlierCleaner),
+   см. python/compare_cleaner_auto.py с проверкой по истинным выбросам.
 3. Обучение PatchApproximator для каждого варианта N (число патчей),
    входящего в CONFIG['variants'].
    ВАЖНО: обучение идёт по ВСЕМ точкам из CSV (после очистки выбросов) —
@@ -35,7 +38,7 @@ matplotlib.use("Agg")  # только сохранение в файл, без G
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from outlier_cleaner import OutlierCleaner
+from outlier_cleaner import build_cleaner
 from patch_approximator import PatchApproximator
 
 
@@ -65,10 +68,18 @@ CONFIG = {
     "metric_scope": "clean",
 
     # --- очистка выбросов ---
+    # mode="manual" — прежнее поведение (пороги заданы руками: мм/сигмы);
+    # mode="auto"   — пороги вычисляются по данным (AutoOutlierCleaner),
+    #                 секция "auto" уходит в него целиком.
+    # На синтетике авторежим даёт precision 1.00 / recall 0.98 против
+    # 0.26 / 0.97 у ручного и не выбрасывает точки на дне глубоких ям
+    # (см. python/compare_cleaner_auto.py).
     "cleaner": {
+        "mode": "auto",
         "threshold_deriv": 0.5,
         "mad_k": 9.5,
         "z_threshold": 3.5,
+        "auto": {"method": "iqr"},
     },
 
     # --- базовые параметры метода (применяются ко всем вариантам) ---
@@ -169,16 +180,19 @@ def load_and_clean(csv_path, cleaner_cfg, ideal_column):
     """
     Читает CSV, группирует по section_id, чистит выбросы.
 
+    Чистильщик берётся из конфига через build_cleaner() и создаётся ЗАНОВО на
+    каждое сечение: авторежим вычисляет пороги по данным этого сечения.
+
     Возвращает dict: section_id -> {
         'angles', 'radii',           # чистые (без выбросов) точки
         'angles_all', 'radii_all',   # все точки (для фона)
         'ideal_deg', 'ideal_r',      # эталон (углы, радиус)
         'n_total', 'n_out',          # всего точек / выброшено
+        'cleaner_params',            # пороги (авто — вычисленные, ручные — заданные)
         'height_mm',
     }
     """
     data = pd.read_csv(csv_path)
-    cleaner = OutlierCleaner(**cleaner_cfg)
 
     sections = {}
     for sid in sorted(data["section_id"].unique()):
@@ -188,6 +202,7 @@ def load_and_clean(csv_path, cleaner_cfg, ideal_column):
         a_all = sec["angle_deg"].values
         r_all = sec["radius_mm"].values
 
+        cleaner = build_cleaner(cleaner_cfg)
         mask = cleaner.clean(a_all, r_all)
 
         sections[sid] = {
@@ -199,6 +214,7 @@ def load_and_clean(csv_path, cleaner_cfg, ideal_column):
             "ideal_r": sec[ideal_column].values,
             "n_total": len(a_all),
             "n_out": int(mask.sum()),
+            "cleaner_params": dict(getattr(cleaner, "params_", {}) or {}),
             "height_mm": float(sec["height_mm"].iloc[0]),
         }
     return sections
@@ -293,12 +309,29 @@ def main():
     sections = load_and_clean(csv_path, cfg["cleaner"], cfg["ideal_column"])
 
     print("\n=== ОЧИСТКА ===")
+    mode = cfg["cleaner"].get("mode", "manual")
+    if mode == "auto":
+        print(f"  Режим: auto ({cfg['cleaner'].get('auto', {}).get('method', '?')}), "
+              "пороги вычисляются по данным каждого сечения")
+    else:
+        print("  Режим: manual (пороги заданы в CONFIG)")
     for sid in cfg["sections"]:
         s = sections[sid]
         pct = 100.0 * s["n_out"] / s["n_total"] if s["n_total"] else 0.0
         print(f"  Сечение {sid} (h={s['height_mm']:.0f} мм): "
               f"выбросов {s['n_out']}/{s['n_total']} ({pct:.1f}%), "
               f"чистых {len(s['angles'])}")
+        if s["cleaner_params"]:
+            keys = ("threshold_mm", "threshold_deriv_mm", "sigma_res_mm",
+                    "sigma_diff_mm", "iqr_res_mm", "baseline_window_points")
+            parts = []
+            for k in keys:
+                if k in s["cleaner_params"]:
+                    v = s["cleaner_params"][k]
+                    parts.append(f"{k}={v:.3f}" if isinstance(v, float)
+                                 else f"{k}={v}")
+            if parts:
+                print(f"      пороги: {', '.join(parts)}")
 
     # --- сетка ТОЛЬКО для отрисовки (в обучении НЕ участвует) ---
     angles_grid = np.linspace(0.0, 360.0, cfg["grid_points"], endpoint=False)

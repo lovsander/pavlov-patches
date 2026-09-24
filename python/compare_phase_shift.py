@@ -56,7 +56,11 @@ CONFIG = {
     "phase_step_deg": 2.0,        # шаг свипа фазы внутри сектора
 
     # --- параметры метода ---
-    "cleaner": {"threshold_deriv": 0.5, "mad_k": 9.5, "z_threshold": 3.5},
+    # Чистка: авторежим (пороги вычисляются по данным). Прежний ручной режим
+    # оставлял точки на дне глубоких ям и тормозил оценку: см. compare_cleaner_auto.py.
+    # Ручной вариант: {"mode": "manual", "threshold_deriv": 0.5,
+    #                  "mad_k": 9.5, "z_threshold": 3.5}
+    "cleaner": {"mode": "auto", "auto": {"method": "iqr"}},
     "base": {"deg_min": 4, "deg_max": 14, "amplitude_scale": 180.0,
              "overlap_train": 15.0, "overlap_use": 5.0},
 
