@@ -14,6 +14,8 @@ compare_patch_counts.py
    (CONFIG['grid_points']) в обучении не участвует вообще.
 4. Отрисовка: 4 сечения в сетке 2x2, на каждом наложены кривые результата
    для каждого N; внизу — средняя RMSE по всем показанным сечениям.
+   Набор N задаётся списком CONFIG['variants'] (по умолчанию 3…10;
+   список можно менять как угодно — код подстраивается под его длину).
 
 Метрика (RMSE/MAE) по умолчанию считается по реальным точкам из файла
 (CONFIG['metric_on'] = "data"), а CONFIG['grid_points'] влияет ТОЛЬКО на то,
@@ -82,14 +84,22 @@ CONFIG = {
     # Ключи 'color'/'label'/'linestyle' — только для отрисовки (в метод не идут).
     # Пунктирные стили намеренно разные, чтобы наложенные кривые не сливались.
     "variants": [
-        {"n_patches": 4,  "color": "tab:blue",   "label": "4 патча",
+        {"n_patches": 3,  "color": "tab:blue",   "label": "3 патча",
          "linestyle": (0, (6, 2))},                    # длинный пунктир
-        {"n_patches": 8,  "color": "tab:orange", "label": "8 патчей",
+        {"n_patches": 4,  "color": "tab:orange", "label": "4 патча",
          "linestyle": (0, (2.5, 1.5))},                # короткий пунктир
-        {"n_patches": 12, "color": "tab:green",  "label": "12 патчей",
+        {"n_patches": 5,  "color": "tab:green",  "label": "5 патчей",
          "linestyle": (0, (1, 1.2))},                  # точечный
-        {"n_patches": 16, "color": "tab:red",    "label": "16 патчей",
+        {"n_patches": 6,  "color": "tab:red",    "label": "6 патчей",
          "linestyle": (0, (5, 1.2, 1, 1.2))},          # штрих-пунктир
+        {"n_patches": 7,  "color": "tab:purple", "label": "7 патчей",
+         "linestyle": (0, (3, 1.2, 1, 1.2))},          # частый штрих-пунктир
+        {"n_patches": 8,  "color": "tab:brown",  "label": "8 патчей",
+         "linestyle": (0, (1, 1.2, 5, 1.2))},          # точка-тире
+        {"n_patches": 9,  "color": "tab:pink",   "label": "9 патчей",
+         "linestyle": (0, (8, 2, 1.5, 2))},            # длинный штрих-точка
+        {"n_patches": 10, "color": "tab:gray",   "label": "10 патчей",
+         "linestyle": (0, (2, 1, 2, 1, 2, 4))},        # тройной штрих
     ],
 
     # --- стиль графиков (линии тонкие и пунктирные: сильное наложение) ---
@@ -376,22 +386,28 @@ def main():
         ax.set_ylabel("Радиус, мм")
         ax.set_xlim(0, 360)
         ax.grid(True, alpha=0.3)
-        ax.legend(fontsize=7, loc="upper right", ncol=1)
+        ax.legend(fontsize=6.5, loc="upper right", ncol=2, framealpha=0.85,
+                  borderpad=0.3, columnspacing=0.8, handlelength=2.4)
 
     for ax in axes[n_sec:]:
         ax.axis("off")
 
     # сводка средней RMSE в заголовке рисунка
-    summary = "   ".join(
+    # (по 4 значения в строке, иначе подпись растягивается за границы)
+    summary_items = [
         f"{v['label']}: {mean_rmse[i]:.5f} мм"
         for i, v in enumerate(cfg["variants"])
+    ]
+    summary = "\n".join(
+        "   ".join(summary_items[i:i + 4])
+        for i in range(0, len(summary_items), 4)
     )
     fig.suptitle(
         f"Сравнение числа патчей на {n_sec} сечениях — средняя RMSE "
-        f"{metric_label}:  " + summary,
+        f"{metric_label}:\n" + summary,
         fontsize=12, y=0.995)
 
-    plt.tight_layout(rect=(0, 0, 1, 0.97))
+    plt.tight_layout(rect=(0, 0, 1, 0.93))
     out = resolve_path(cfg["output"])
     plt.savefig(out, dpi=cfg["dpi"], bbox_inches="tight")
     print(f"\nГрафик сохранён: {out}")
@@ -432,17 +448,18 @@ def main():
             ax.set_ylabel("Δr, мм")
             ax.set_xlim(0, 360)
             ax.grid(True, alpha=0.3)
-            ax.legend(fontsize=7, loc="upper right", ncol=1)
+            ax.legend(fontsize=6.5, loc="upper right", ncol=2, framealpha=0.85,
+                      borderpad=0.3, columnspacing=0.8, handlelength=2.4)
 
         for ax in axes2[n_sec:]:
             ax.axis("off")
 
-        fig2.suptitle("Невязка аппроксимации к эталону — средняя RMSE "
-                      f"{metric_label}:  " + summary
-                      + "   | кривые — по сетке отрисовки, "
-                        "точки — измерения из файла",
-                      fontsize=12, y=0.995)
-        plt.tight_layout(rect=(0, 0, 1, 0.97))
+        fig2.suptitle(
+            "Невязка аппроксимации к эталону — средняя RMSE "
+            f"{metric_label}:\n" + summary
+            + "\nкривые — по сетке отрисовки, точки — измерения из файла",
+            fontsize=12, y=0.995)
+        plt.tight_layout(rect=(0, 0, 1, 0.90))
         out2 = resolve_path(cfg["output_residuals"])
         plt.savefig(out2, dpi=cfg["dpi"], bbox_inches="tight")
         print(f"График невязок сохранён: {out2}")
