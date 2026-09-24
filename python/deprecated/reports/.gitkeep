@@ -1,0 +1,3 @@
+Local-only archive of superseded run reports and serialized models
+(covered by report_*.txt / model_*.txt / *.npz in .gitignore).
+See ../README.md for details.
