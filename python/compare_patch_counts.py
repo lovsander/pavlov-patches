@@ -23,7 +23,8 @@ compare_patch_counts.py
 возвращается значением metric_on = "grid".
 
 Все параметры метода задаются в CONFIG (число патчей, deg_min/deg_max,
-amplitude_scale, перекрытия обучения/применения и т.д.).
+amplitude_scale, перекрытия обучения/применения, фазовый сдвиг сетки
+phase_deg и т.д.).
 Сектора и зоны перекрытия пересчитываются автоматически под каждое N.
 """
 
@@ -77,10 +78,12 @@ CONFIG = {
         "amplitude_scale": 180.0,
         "overlap_train": 15.0,
         "overlap_use": 5.0,
+        "phase_deg": 0.0,        # фазовый сдвиг сетки патчей, °
     },
 
     # --- варианты: тут задаётся число патчей и (опц.) переопределения base ---
-    # Любой ключ из 'base' можно переопределить прямо в варианте.
+    # Любой ключ из 'base' можно переопределить прямо в варианте
+    # (например phase_deg — фазовый сдвиг сетки патчей, °).
     # Ключи 'color'/'label'/'linestyle' — только для отрисовки (в метод не идут).
     # Пунктирные стили намеренно разные, чтобы наложенные кривые не сливались.
     "variants": [
@@ -154,6 +157,7 @@ def make_approximator(params):
         amplitude_scale=float(params["amplitude_scale"]),
         overlap_train=float(params["overlap_train"]),
         overlap_use=float(params["overlap_use"]),
+        phase_deg=float(params.get("phase_deg", 0.0)),
     )
 
 
@@ -254,6 +258,7 @@ def evaluate_variant(section, params, angles_grid,
         "half_train": approx.half_sector_ + approx.overlap_train,
         "half_use": approx.half_sector_ + approx.overlap_use,
         "n_patches": approx.n_patches,
+        "phase_deg": float(approx.phase_deg),
         "n_train": int(len(section["angles"])),
         "n_metric": int(valid.sum()),
         "metric_on": metric_on,
@@ -319,8 +324,10 @@ def main():
                   f"max={info['max_err']:.5f}   [{info['metric_scope']}: "
                   f"обучение {info['n_train']} тчк, "
                   f"метрика по {info['n_metric']} тчк ({src})]")
+            phase_txt = (f"phase={info['phase_deg']:.2f}°  "
+                         if info["phase_deg"] else "")
             print(f"      half_sector={info['half_sector']:.2f}° "
-                  f"half_use={info['half_use']:.2f}°  "
+                  f"half_use={info['half_use']:.2f}°  {phase_txt}"
                   f"deg={info['degrees']}")
 
     # --- средняя RMSE по всем показанным сечениям для каждого варианта ---

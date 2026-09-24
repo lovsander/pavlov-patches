@@ -48,6 +48,7 @@ def save_model(approx, filepath, meta=None):
             "units": {"angle": "degree", "length": "mm"},
             "n_patches": int(approx.n_patches),
             "half_sector_deg": float(approx.half_sector_),
+            "phase_deg": float(getattr(approx, "phase_deg", 0.0)),
             "half_train_deg": float(approx.half_sector_ + approx.overlap_train),
             "half_use_deg": float(approx.half_sector_ + approx.overlap_use),
             "overlap_train_deg": float(approx.overlap_train),
@@ -108,6 +109,7 @@ def load_model(filepath):
         amplitude_scale=float(g["amplitude_scale"]),
         overlap_train=float(g["overlap_train_deg"]),
         overlap_use=float(g["overlap_use_deg"]),
+        phase_deg=float(g.get("phase_deg", 0.0)),
     )
 
     # Восстанавливаем состояние
@@ -179,9 +181,10 @@ def validate_model(filepath):
         if "patches" in data and "half_sector_deg" in g and "n_patches" in g:
             hs = float(g["half_sector_deg"])
             np_ = int(g["n_patches"])
+            phase = float(g.get("phase_deg", 0.0))
             step = 360.0 / np_
             for i, p in enumerate(data["patches"]):
-                expected = i * step + hs
+                expected = (i * step + hs + phase) % 360.0
                 actual = float(p.get("center_deg", -1))
                 if abs(actual - expected) > 1e-6:
                     errors.append(
@@ -241,6 +244,7 @@ def summary(filepath):
     print(f"n_patches: {g['n_patches']}")
     print(f"deg_min/max: {g['deg_min']}/{g['deg_max']}")
     print(f"amplitude_scale: {g['amplitude_scale']}")
+    print(f"phase_deg: {g.get('phase_deg', 0.0)}")
 
     print("\nPatches:")
     print(f"{'#':>3} {'center':>8} {'deg':>4} {'n_pts':>6} "

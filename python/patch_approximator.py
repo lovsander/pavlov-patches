@@ -10,13 +10,16 @@ patch_approximator.py
 - чётные степени
 - обучение шире (train_overlap), blend уже (use_overlap)
 - smoothstep-веса с доминированием в своём секторе
+- фаза сетки (phase_deg): центры патчей повёрнуты на заданный угол;
+  phase_deg=0 — историческое поведение (первый сектор начинается с 0°)
 """
 
 import numpy as np
 
 
 class PatchApproximator:
-    def __init__(self, n_patches=8, deg_min=4, deg_max=14, amplitude_scale=180.0, overlap_train=15.0, overlap_use=5.0):
+    def __init__(self, n_patches=8, deg_min=4, deg_max=14, amplitude_scale=180.0,
+                 overlap_train=15.0, overlap_use=5.0, phase_deg=0.0):
         if deg_min % 2 != 0:
             deg_min += 1
         if deg_max % 2 != 0:
@@ -27,6 +30,8 @@ class PatchApproximator:
         self.amplitude_scale = amplitude_scale
         self.overlap_train = overlap_train
         self.overlap_use = overlap_use
+        # Фазовый сдвиг сетки патчей, °. 0 — первый сектор начинается с 0°.
+        self.phase_deg = float(phase_deg) % 360.0
         self.centers_ = None
         self.half_sector_ = None
         self.patches_ = []
@@ -82,7 +87,12 @@ class PatchApproximator:
 
         sector = 360.0 / self.n_patches
         self.half_sector_ = sector / 2
-        self.centers_ = [i * sector + self.half_sector_ for i in range(self.n_patches)]
+        # Центры патчей повёрнуты на phase_deg. Порядок патчей сохраняется
+        # (i-й патч = i-й центр) — так же, как в .npz и .pmodel.
+        self.centers_ = [
+            (i * sector + self.half_sector_ + self.phase_deg) % 360.0
+            for i in range(self.n_patches)
+        ]
 
         angles_ext = np.concatenate([angles - 360, angles, angles + 360])
         radii_ext = np.concatenate([radii, radii, radii])
@@ -219,6 +229,7 @@ class PatchApproximator:
             'amplitude_scale': self.amplitude_scale,
             'overlap_train': self.overlap_train,
             'overlap_use': self.overlap_use,
+            'phase_deg': self.phase_deg,
             'centers': np.array(self.centers_),
             'degrees': np.array(self.degrees_),
         }
@@ -239,6 +250,8 @@ class PatchApproximator:
             amplitude_scale=float(d['amplitude_scale']),
             overlap_train=float(d['overlap_train']),
             overlap_use=float(d['overlap_use']),
+            # старые .npz без поля фазы читаются как phase_deg = 0
+            phase_deg=float(d['phase_deg']) if 'phase_deg' in d else 0.0,
         )
         obj.centers_ = list(d['centers'])
         obj.half_sector_ = 360.0 / obj.n_patches / 2
