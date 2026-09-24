@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "pavlov-patches: Adaptive Poly-Patch Approximation (APPA)"
+type: software
+authors:
+  - family-names: "<<Family>>"
+    given-names: "<<Given>>"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/<<user>>/pavlov-patches"
+license: MIT
+keywords:
+  - polynomial approximation
+  - piecewise polynomial
+  - adaptive degree
+  - profile metrology
+  - closed profiles
+  - curve fitting

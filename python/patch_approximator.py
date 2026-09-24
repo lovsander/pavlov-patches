@@ -1,0 +1,261 @@
+"""
+patch_approximator.py
+
+Класс PatchApproximator — аппроксимация замкнутых форм
+(тел вращения) кусочно-полиномиальными патчами с адаптивной степенью.
+
+Метод Павлова (patch method):
+- N патчей с перекрытием
+- адаптивная степень по нормализованной амплитуде сектора
+- чётные степени
+- обучение шире (train_overlap), blend уже (use_overlap)
+- smoothstep-веса с доминированием в своём секторе
+"""
+
+import numpy as np
+
+
+class PatchApproximator:
+    def __init__(self, n_patches=8, deg_min=4, deg_max=14, amplitude_scale=180.0, overlap_train=15.0, overlap_use=5.0):
+        if deg_min % 2 != 0:
+            deg_min += 1
+        if deg_max % 2 != 0:
+            deg_max += 1
+        self.n_patches = n_patches
+        self.deg_min = deg_min
+        self.deg_max = deg_max
+        self.amplitude_scale = amplitude_scale
+        self.overlap_train = overlap_train
+        self.overlap_use = overlap_use
+        self.centers_ = None
+        self.half_sector_ = None
+        self.patches_ = []
+        self.degrees_ = None
+        self.is_fitted_ = False
+
+    def _smoothstep_vec(self, t):
+        """Векторизованный Smoothstep, ограниченный диапазоном [0, 1]."""
+        t = np.clip(t, 0.0, 1.0)
+        return t * t * (3.0 - 2.0 * t)
+
+
+    def _estimate_degree(self, angles, radii, center):
+        mask_sec = np.abs((angles - center + 180) % 360 - 180) <= self.half_sector_
+        r_sec = radii[mask_sec]
+
+        if len(r_sec) < 5:
+            return self.deg_min, {
+                'amplitude_mm': 0.0,
+                'mean_radius_mm': 0.0,
+                'amplitude_norm': 0.0,
+            }
+
+        amp = float(np.percentile(r_sec, 95) - np.percentile(r_sec, 5))
+        mean_r = float(np.mean(r_sec))
+
+        if mean_r <= 0:
+            return self.deg_min, {
+                'amplitude_mm': amp,
+                'mean_radius_mm': mean_r,
+                'amplitude_norm': 0.0,
+            }
+
+        amp_norm = amp / mean_r
+        deg = int(round(amp_norm * self.amplitude_scale))
+        deg = max(self.deg_min, min(self.deg_max, deg))
+        if deg % 2 != 0:
+            deg += 1
+
+        metrics = {
+            'amplitude_mm': amp,
+            'mean_radius_mm': mean_r,
+            'amplitude_norm': amp_norm,
+        }
+        return deg, metrics
+
+    def fit(self, angles, radii):
+        import time
+        t0 = time.perf_counter()
+
+        angles = np.asarray(angles, dtype=float)
+        radii = np.asarray(radii, dtype=float)
+
+        sector = 360.0 / self.n_patches
+        self.half_sector_ = sector / 2
+        self.centers_ = [i * sector + self.half_sector_ for i in range(self.n_patches)]
+
+        angles_ext = np.concatenate([angles - 360, angles, angles + 360])
+        radii_ext = np.concatenate([radii, radii, radii])
+
+        self.patches_ = []
+        self.degrees_ = []
+
+        for c in self.centers_:
+            deg, metrics = self._estimate_degree(angles, radii, c)
+            self.degrees_.append(deg)
+
+            half_train = self.half_sector_ + self.overlap_train
+            half_use = self.half_sector_ + self.overlap_use
+
+            mask = (angles_ext >= c - half_train) & (angles_ext <= c + half_train)
+            local_x = angles_ext[mask] - c
+            local_y = radii_ext[mask]
+
+            coefs = np.polyfit(local_x, local_y, deg)
+
+            # stats по остаткам
+            r_fit = np.polyval(coefs, local_x)
+            residuals = r_fit - local_y
+            rmse = float(np.sqrt(np.mean(residuals ** 2)))
+            mae = float(np.mean(np.abs(residuals)))
+            max_err = float(np.max(np.abs(residuals)))
+            if np.std(r_fit) > 0 and np.std(local_y) > 0:
+                corr = float(np.corrcoef(r_fit, local_y)[0, 1])
+            else:
+                corr = 0.0
+
+            self.patches_.append({
+                'center': c,
+                'degree': deg,
+                'n_points': int(mask.sum()),
+                'coefs': coefs,
+                'half_sector': self.half_sector_,
+                'half_train': half_train,
+                'half_use': half_use,
+                'metrics': metrics,
+                'stats': {
+                    'rmse_mm': rmse,
+                    'mae_mm': mae,
+                    'max_err_mm': max_err,
+                    'correlation': corr,
+                },
+            })
+
+        self.degrees_ = np.array(self.degrees_)
+        self.is_fitted_ = True
+
+        fit_time_ms = (time.perf_counter() - t0) * 1000.0
+        self.statistics_ = {
+            'n_points_total': int(len(angles)),
+            'n_outliers_removed': 0,   # задаётся снаружи, если нужно
+            'fit_time_ms': fit_time_ms,
+        }
+        return self
+
+    def eval(self, angles):
+        """
+        ПОЛНОСТЬЮ ВЕКТОРИЗОВАННЫЙ МЕТОД РАСЧЕТА КОНТУРА.
+        Работает без циклов Python по точкам геометрии.
+        """
+        if not self.is_fitted_:
+            raise RuntimeError("Сначала вызовите fit()")
+        angles = np.asarray(angles, dtype=float)
+
+        # Результирующие матрицы: строки - точки углов (M), столбцы - патчи (N)
+        M = len(angles)
+        N = self.n_patches
+
+        vals_matrix = np.zeros((M, N))
+        weights_matrix = np.zeros((M, N))
+
+        # Проходим только по количеству патчей (их всего 8, а не 3600 точек)
+        for idx, p in enumerate(self.patches_):
+            c = p['center']
+
+            # Расчет кратчайшего расстояния по дуге (циклическая метрика) - векторно для всех углов
+            d = np.abs((angles - c + 180) % 360 - 180)
+            local_coord = (angles - c + 180) % 360 - 180
+
+            # Векторизованный расчет весов для текущего патча по всему массиву углов
+            w = np.zeros(M)
+            # Внутри своего сектора вес = 1
+            w[d <= self.half_sector_] = 1.0
+
+            # В зоне блендинга (перекрытия) - плавное затухание smoothstep
+            blend_mask = (d > self.half_sector_) & (d <= p['half_use'])
+            if np.any(blend_mask):
+                t = 1.0 - (d[blend_mask] - self.half_sector_) / \
+                    (p['half_use'] - self.half_sector_)
+                # встроенный smoothstep
+                w[blend_mask] = t * t * (3.0 - 2.0 * t)
+
+            # Расчет значения полинома p['coefs'] сразу для всей сетки локальных координат
+            vals_matrix[:, idx] = np.polyval(p['coefs'], local_coord)
+            weights_matrix[:, idx] = w
+
+        # Векторизованное взвешенное среднее по строкам (ось 1)
+        sum_weights = np.sum(weights_matrix, axis=1)
+
+        # Защита от деления на ноль (если точка выпала из всех секторов)
+        safe_mask = sum_weights > 0
+        fitted = np.zeros(M)
+        fitted[safe_mask] = np.sum(
+            weights_matrix[safe_mask] * vals_matrix[safe_mask], axis=1) / sum_weights[safe_mask]
+        fitted[~safe_mask] = np.nan
+
+        return fitted
+
+    def get_degrees(self):
+        """Список степеней по патчам."""
+        if not self.is_fitted_:
+            raise RuntimeError("Сначала вызовите fit()")
+        return self.degrees_.tolist()
+
+    def get_coefficients(self):
+        """Словарь: центр патча → коэффициенты полинома."""
+        if not self.is_fitted_:
+            raise RuntimeError("Сначала вызовите fit()")
+        return {p['center']: p['coefs'].tolist() for p in self.patches_}
+
+    def save(self, path):
+        """Сохранение в .npz (коэффициенты + параметры)."""
+        if not self.is_fitted_:
+            raise RuntimeError("Сначала вызовите fit()")
+
+        data = {
+            'n_patches': self.n_patches,
+            'deg_min': self.deg_min,
+            'deg_max': self.deg_max,
+            'amplitude_scale': self.amplitude_scale,
+            'overlap_train': self.overlap_train,
+            'overlap_use': self.overlap_use,
+            'centers': np.array(self.centers_),
+            'degrees': np.array(self.degrees_),
+        }
+        for j, p in enumerate(self.patches_):
+            data[f'coefs_{j}'] = p['coefs']
+            data[f'n_points_{j}'] = p['n_points']
+
+        np.savez(path, **data)
+
+    @classmethod
+    def load(cls, path):
+        """Загрузка из .npz."""
+        d = np.load(path)
+        obj = cls(
+            n_patches=int(d['n_patches']),
+            deg_min=int(d['deg_min']),
+            deg_max=int(d['deg_max']),
+            amplitude_scale=float(d['amplitude_scale']),
+            overlap_train=float(d['overlap_train']),
+            overlap_use=float(d['overlap_use']),
+        )
+        obj.centers_ = list(d['centers'])
+        obj.half_sector_ = 360.0 / obj.n_patches / 2
+        obj.degrees_ = np.array(d['degrees'])
+
+        obj.patches_ = []
+        for j, c in enumerate(obj.centers_):
+            obj.patches_.append({
+                'center': c,
+                'half_sector': obj.half_sector_,
+                'half_train': obj.half_sector_ + obj.overlap_train,
+                'half_use': obj.half_sector_ + obj.overlap_use,
+                'coefs': d[f'coefs_{j}'],
+                'degree': int(d['degrees'][j]),
+                'n_points': int(d[f'n_points_{j}']),
+            })
+
+        obj.is_fitted_ = True
+        return obj
+

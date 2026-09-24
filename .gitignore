@@ -1,0 +1,68 @@
+# ==============================================================================
+# Build artifacts (C / C++ / CMake)
+# ==============================================================================
+build/
+out/
+cmake-build-*/
+*.exe
+*.obj
+*.o
+*.lo
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+*.pdb
+*.ilk
+*.idb
+*.exp
+*.tlog
+vc140.pdb
+
+# ==============================================================================
+# IDE / editors
+# ==============================================================================
+.vs/
+.idea/
+*.user
+*.suo
+# Shared VS Code config is intentionally tracked:
+!.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/c_cpp_properties.json
+
+# ==============================================================================
+# Python
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# ==============================================================================
+# Generated data / reports / serialized models
+# ==============================================================================
+synthetic_data*.csv
+smoothed_geometry_output.csv
+model_*.txt
+report_*.txt
+*.npz
+
+# ==============================================================================
+# Generated images (plot snapshots from scripts).
+# Curated presentation assets live under docs/assets/ and ARE tracked.
+# ==============================================================================
+*.png
+*.svg
+!docs/assets/**/*.png
+!docs/assets/**/*.svg
