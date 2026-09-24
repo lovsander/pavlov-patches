@@ -4,12 +4,24 @@ demo_patch_approximator.py
 Демонстрация: OutlierCleaner + PatchApproximator.
 """
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
-from outlier_cleaner import OutlierCleaner
-from patch_approximator import PatchApproximator
+from appa.core.outlier_cleaner import OutlierCleaner
+from appa.core.patch_approximator import PatchApproximator
 
 
 # ============ ЗАГРУЗКА ============

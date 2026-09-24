@@ -7,7 +7,7 @@ CrackDetector v3.
 """
 
 import numpy as np
-from patch_approximator import PatchApproximator
+from .patch_approximator import PatchApproximator
 
 
 class CrackDetector:

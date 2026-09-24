@@ -6,7 +6,13 @@ patch_approximator.py
 
 Метод Павлова (patch method):
 - N патчей с перекрытием
-- адаптивная степень по нормализованной амплитуде сектора
+- адаптивная степень по ОСТАТКАМ обучения (правило «локтя»): берём
+  наименьшую чётную степень, на которой RMSE обучающего окна не хуже
+  лучшей более чем на deg_elbow_tol. Историческая метрика «по
+  нормализованной амплитуде сектора» (P95-P5) оставлена только как
+  справочная в metrics: она измеряет размах, а не сложность формы,
+  поэтому недооценивала узкие глубокие ямы и переоценивала пологие
+  широкие секторы.
 - чётные степени
 - обучение шире (train_overlap), blend уже (use_overlap)
 - smoothstep-веса с доминированием в своём секторе
@@ -19,7 +25,8 @@ import numpy as np
 
 class PatchApproximator:
     def __init__(self, n_patches=8, deg_min=4, deg_max=14, amplitude_scale=180.0,
-                 overlap_train=15.0, overlap_use=5.0, phase_deg=0.0):
+                 overlap_train=15.0, overlap_use=5.0, phase_deg=0.0,
+                 deg_elbow_tol=0.05):
         if deg_min % 2 != 0:
             deg_min += 1
         if deg_max % 2 != 0:
@@ -27,7 +34,11 @@ class PatchApproximator:
         self.n_patches = n_patches
         self.deg_min = deg_min
         self.deg_max = deg_max
+        # Историческая амплитудная шкала: больше НЕ влияет на выбор степени,
+        # хранится для совместимости форматов (.npz/.pmodel) и отчётов.
         self.amplitude_scale = amplitude_scale
+        # Правило «локтя»: допуск по RMSE относительно лучшей степени, доли.
+        self.deg_elbow_tol = float(deg_elbow_tol)
         self.overlap_train = overlap_train
         self.overlap_use = overlap_use
         # Фазовый сдвиг сетки патчей, °. 0 — первый сектор начинается с 0°.
@@ -45,38 +56,78 @@ class PatchApproximator:
 
 
     def _estimate_degree(self, angles, radii, center):
-        mask_sec = np.abs((angles - center + 180) % 360 - 180) <= self.half_sector_
+        """
+        Степень патча по ОСТАТКАМ на обучающем окне (правило «локтя»).
+
+        Почему не по амплитуде: P95-P5 измеряет размах сектора, а не
+        сложность формы. Узкая глубокая яма даёт маленький размах (мало
+        точек ниже перцентиля) и получала заниженную степень, а широкий
+        пологий сектор с шумом/волнистостью — завышенную. Остатки же
+        напрямую показывают, сколько структуры полином не описывает.
+
+        Алгоритм: считаем МНК-RMSE на обучающем окне (half_train) для всех
+        чётных степеней deg_min..deg_max и берём НАИМЕНЬШУЮ степень, где
+        RMSE не хуже лучшей более чем на deg_elbow_tol.
+
+        Возвращает (degree, metrics) — metrics только из чисел (формат
+        .pmodel требует float-значений).
+        """
+        sector = 360.0 / self.n_patches
+        half_sector = sector / 2.0
+        mask_sec = np.abs((angles - center + 180) % 360 - 180) <= half_sector
         r_sec = radii[mask_sec]
 
-        if len(r_sec) < 5:
-            return self.deg_min, {
-                'amplitude_mm': 0.0,
-                'mean_radius_mm': 0.0,
-                'amplitude_norm': 0.0,
-            }
+        # Справочная (историческая) амплитудная метрика — для отчётов.
+        if len(r_sec) >= 5:
+            amp = float(np.percentile(r_sec, 95) - np.percentile(r_sec, 5))
+            mean_r_sec = float(np.mean(r_sec))
+        else:
+            amp, mean_r_sec = 0.0, 0.0
+        amp_norm = amp / mean_r_sec if mean_r_sec > 0 else 0.0
 
-        amp = float(np.percentile(r_sec, 95) - np.percentile(r_sec, 5))
-        mean_r = float(np.mean(r_sec))
-
-        if mean_r <= 0:
-            return self.deg_min, {
-                'amplitude_mm': amp,
-                'mean_radius_mm': mean_r,
-                'amplitude_norm': 0.0,
-            }
-
-        amp_norm = amp / mean_r
-        deg = int(round(amp_norm * self.amplitude_scale))
-        deg = max(self.deg_min, min(self.deg_max, deg))
-        if deg % 2 != 0:
-            deg += 1
-
-        metrics = {
+        base_metrics = {
             'amplitude_mm': amp,
-            'mean_radius_mm': mean_r,
+            'mean_radius_mm': mean_r_sec,
             'amplitude_norm': amp_norm,
+            'deg_elbow_tol': float(self.deg_elbow_tol),
         }
-        return deg, metrics
+
+        half_train = half_sector + self.overlap_train
+        # Окно строим ровно так же, как в fit(): разворачиваем кольцо на ±360°
+        # и берём точки в [center - half_train, center + half_train], поэтому
+        # остатки кандидатов считаются на том же наборе точек, что и финальный МНК.
+        angles_ext = np.concatenate([angles - 360, angles, angles + 360])
+        radii_ext = np.concatenate([radii, radii, radii])
+        mask = (angles_ext >= center - half_train) & (angles_ext <= center + half_train)
+        local_x = angles_ext[mask] - center
+        local_y = radii_ext[mask]
+
+        if len(local_x) < 5:
+            base_metrics.update({'rmse_selected_mm': 0.0, 'rmse_best_mm': 0.0,
+                                 'n_train_points': int(len(local_x))})
+            return self.deg_min, base_metrics
+
+        best_rmse, best_deg = None, self.deg_min
+        results = []
+        for deg in range(self.deg_min, self.deg_max + 1, 2):
+            coefs = np.polyfit(local_x, local_y, deg)
+            rmse = float(np.sqrt(np.mean(
+                (np.polyval(coefs, local_x) - local_y) ** 2)))
+            results.append((deg, rmse))
+            if best_rmse is None or rmse < best_rmse:
+                best_rmse, best_deg = rmse, deg
+
+        limit = best_rmse * (1.0 + self.deg_elbow_tol)
+        selected_deg, selected_rmse = next(
+            ((deg, rmse) for deg, rmse in results if rmse <= limit),
+            (best_deg, best_rmse))                 # страховка: лучшая степень
+
+        base_metrics.update({
+            'rmse_selected_mm': float(selected_rmse),
+            'rmse_best_mm': float(best_rmse),
+            'n_train_points': int(len(local_x)),
+        })
+        return int(selected_deg), base_metrics
 
     def fit(self, angles, radii):
         import time
@@ -227,6 +278,7 @@ class PatchApproximator:
             'deg_min': self.deg_min,
             'deg_max': self.deg_max,
             'amplitude_scale': self.amplitude_scale,
+            'deg_elbow_tol': self.deg_elbow_tol,
             'overlap_train': self.overlap_train,
             'overlap_use': self.overlap_use,
             'phase_deg': self.phase_deg,
@@ -252,6 +304,8 @@ class PatchApproximator:
             overlap_use=float(d['overlap_use']),
             # старые .npz без поля фазы читаются как phase_deg = 0
             phase_deg=float(d['phase_deg']) if 'phase_deg' in d else 0.0,
+            # старые .npz без поля допуска читаются как deg_elbow_tol = 0.05
+            deg_elbow_tol=float(d['deg_elbow_tol']) if 'deg_elbow_tol' in d else 0.05,
         )
         obj.centers_ = list(d['centers'])
         obj.half_sector_ = 360.0 / obj.n_patches / 2
@@ -271,4 +325,3 @@ class PatchApproximator:
 
         obj.is_fitted_ = True
         return obj
-

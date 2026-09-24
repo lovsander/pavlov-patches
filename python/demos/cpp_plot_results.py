@@ -1,7 +1,19 @@
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
 # Автоматически определяем рабочую директорию скрипта
 script_dir = os.path.dirname(os.path.abspath(__file__))

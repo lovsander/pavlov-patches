@@ -31,20 +31,42 @@ phase_deg и т.д.).
 Сектора и зоны перекрытия пересчитываются автоматически под каждое N.
 """
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
+
 import numpy as np
+
 import pandas as pd
+
 import matplotlib
+
 matplotlib.use("Agg")  # только сохранение в файл, без GUI
+
 import matplotlib.pyplot as plt
+
 from pathlib import Path
 
-from outlier_cleaner import build_cleaner
-from patch_approximator import PatchApproximator
+from appa.core.outlier_cleaner import build_cleaner
 
+from appa.core.patch_approximator import PatchApproximator
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-# ============================================================================
-# КОНФИГУРАЦИЯ
-# ============================================================================
+from appa.analysis.model_scan import build_variant_config, evaluate_variant
+from appa.io.dataset import load_and_clean
+from appa.paths import resolve_path
 
 CONFIG = {
     # --- данные ---
@@ -134,160 +156,6 @@ CONFIG = {
     "dpi": 120,
 }
 
-# Ключи варианта, которые используются ТОЛЬКО для отрисовки
-# и не передаются в PatchApproximator.
-PLOT_ONLY_KEYS = ("color", "label", "linestyle")
-
-
-# ============================================================================
-# СЛУЖЕБНЫЕ ФУНКЦИИ
-# ============================================================================
-
-def resolve_path(name):
-    """Путь к файлу относительно папки скрипта (не текущего каталога)."""
-    p = Path(name)
-    if p.is_absolute():
-        return p
-    return Path(__file__).resolve().parent / name
-
-
-def build_variant_config(base, variant):
-    """Сливает базовые параметры метода с переопределениями варианта."""
-    params = dict(base)
-    params.update({k: v for k, v in variant.items()
-                   if k not in PLOT_ONLY_KEYS})
-    return params
-
-
-def make_approximator(params):
-    """Создаёт PatchApproximator строго из известных ему аргументов."""
-    return PatchApproximator(
-        n_patches=int(params["n_patches"]),
-        deg_min=int(params["deg_min"]),
-        deg_max=int(params["deg_max"]),
-        amplitude_scale=float(params["amplitude_scale"]),
-        overlap_train=float(params["overlap_train"]),
-        overlap_use=float(params["overlap_use"]),
-        phase_deg=float(params.get("phase_deg", 0.0)),
-    )
-
-
-# ============================================================================
-# ЗАГРУЗКА + ОЧИСТКА
-# ============================================================================
-
-def load_and_clean(csv_path, cleaner_cfg, ideal_column):
-    """
-    Читает CSV, группирует по section_id, чистит выбросы.
-
-    Чистильщик берётся из конфига через build_cleaner() и создаётся ЗАНОВО на
-    каждое сечение: авторежим вычисляет пороги по данным этого сечения.
-
-    Возвращает dict: section_id -> {
-        'angles', 'radii',           # чистые (без выбросов) точки
-        'angles_all', 'radii_all',   # все точки (для фона)
-        'ideal_deg', 'ideal_r',      # эталон (углы, радиус)
-        'n_total', 'n_out',          # всего точек / выброшено
-        'cleaner_params',            # пороги (авто — вычисленные, ручные — заданные)
-        'height_mm',
-    }
-    """
-    data = pd.read_csv(csv_path)
-
-    sections = {}
-    for sid in sorted(data["section_id"].unique()):
-        sec = data[data["section_id"] == sid] \
-            .copy().sort_values("angle_deg").reset_index(drop=True)
-
-        a_all = sec["angle_deg"].values
-        r_all = sec["radius_mm"].values
-
-        cleaner = build_cleaner(cleaner_cfg)
-        mask = cleaner.clean(a_all, r_all)
-
-        sections[sid] = {
-            "angles": a_all[~mask],
-            "radii": r_all[~mask],
-            "angles_all": a_all,
-            "radii_all": r_all,
-            "ideal_deg": sec["angle_deg"].values,
-            "ideal_r": sec[ideal_column].values,
-            "n_total": len(a_all),
-            "n_out": int(mask.sum()),
-            "cleaner_params": dict(getattr(cleaner, "params_", {}) or {}),
-            "height_mm": float(sec["height_mm"].iloc[0]),
-        }
-    return sections
-
-
-# ============================================================================
-# ОБУЧЕНИЕ И ОЦЕНКА
-# ============================================================================
-
-def evaluate_variant(section, params, angles_grid,
-                     metric_on="data", metric_scope="clean"):
-    """
-    Обучает PatchApproximator variant-параметрами и считает метрики.
-
-    ОБУЧЕНИЕ: идёт по ВСЕМ точкам файла, прошедшим очистку выбросов
-    (section["angles"], section["radii"]). Сетка отрисовки angles_grid
-    в обучение не попадает.
-
-    angles_grid используется ТОЛЬКО для отрисовки: по нему считается
-    fitted_grid — та кривая, которую рисуем на графике.
-
-    МЕТРИКИ (RMSE/MAE/max) считаются:
-      metric_on="data" — по реальным точкам файла (по умолчанию);
-      metric_on="grid" — по равномерной сетке отрисовки (прежнее поведение).
-    metric_scope выбирает набор точек: "clean" (после очистки) или "all".
-
-    Возвращает (fitted_grid, rmse, info).
-    """
-    approx = make_approximator(params)
-    approx.fit(section["angles"], section["radii"])   # ← все точки из файла
-
-    fitted_grid = approx.eval(angles_grid)            # ← только для отрисовки
-
-    # --- точки, по которым считаем метрику ---
-    if metric_scope == "all":
-        a_m, r_m = section["angles_all"], section["radii_all"]
-    else:
-        a_m, r_m = section["angles"], section["radii"]
-
-    if metric_on == "grid":
-        fitted_m = fitted_grid
-        ideal_m = np.interp(angles_grid,
-                            section["ideal_deg"], section["ideal_r"])
-    else:
-        fitted_m = approx.eval(a_m)
-        ideal_m = np.interp(a_m, section["ideal_deg"], section["ideal_r"])
-
-    valid = np.isfinite(fitted_m) & np.isfinite(ideal_m)
-    diff = fitted_m[valid] - ideal_m[valid]
-    rmse = float(np.sqrt(np.mean(diff ** 2)))
-    mae = float(np.mean(np.abs(diff)))
-    max_err = float(np.max(np.abs(diff)))
-
-    info = {
-        "degrees": approx.get_degrees(),
-        "half_sector": approx.half_sector_,
-        "half_train": approx.half_sector_ + approx.overlap_train,
-        "half_use": approx.half_sector_ + approx.overlap_use,
-        "n_patches": approx.n_patches,
-        "phase_deg": float(approx.phase_deg),
-        "n_train": int(len(section["angles"])),
-        "n_metric": int(valid.sum()),
-        "metric_on": metric_on,
-        "metric_scope": metric_scope,
-        "mae": mae,
-        "max_err": max_err,
-    }
-    return fitted_grid, rmse, info
-
-
-# ============================================================================
-# MAIN
-# ============================================================================
 
 def main():
     cfg = CONFIG
@@ -503,7 +371,6 @@ def main():
         out2 = resolve_path(cfg["output_residuals"])
         plt.savefig(out2, dpi=cfg["dpi"], bbox_inches="tight")
         print(f"График невязок сохранён: {out2}")
-
 
 if __name__ == "__main__":
     main()

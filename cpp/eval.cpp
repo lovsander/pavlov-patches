@@ -28,6 +28,8 @@ private:
     double amplitude_scale;
     double overlap_train;
     double overlap_use;
+    // допуск политики степени (RMSE-«локоть»), доли
+    double deg_elbow_tol;
 
     double half_sector;
     std::vector<double> centers;
@@ -129,50 +131,75 @@ private:
         return coefs;
     }
 
-    // Оценка степени полинома по нормализованной амплитуде сектора (метод Павлова)
+    // Политика степени: наименьшая чётная степень, на которой RMSE обучающего
+    // окна (half_sector + overlap_train) не хуже лучшей более чем на deg_elbow_tol.
+    // Амплитудная шкала (P95-P5)/mean*amplitude_scale измеряла размах, а не
+    // сложность формы (недооценивала узкие глубокие ямы) — оставлена только как
+    // исторический параметр вызова.
     int estimate_degree(const std::vector<double> &angles, const std::vector<double> &radii, double center) const
     {
-        std::vector<double> r_sec;
-        for (size_t i = 0; i < angles.size(); ++i)
-        {
-            double d = std::abs(std::fmod(angles[i] - center + 180.0, 360.0));
-            if (d < 0)
-                d += 360.0;
-            d = std::abs(d - 180.0);
+        double half_train = half_sector + overlap_train;
 
-            if (d <= half_sector)
+        // Окно строим так же, как в fit(): кольцо, развёрнутое на +-360 градусов
+        std::vector<double> local_x, local_y;
+        for (int shift : {-360, 0, 360})
+        {
+            for (size_t i = 0; i < angles.size(); ++i)
             {
-                r_sec.push_back(radii[i]);
+                double dx = angles[i] + shift - center;
+                if (dx >= -half_train && dx <= half_train)
+                {
+                    local_x.push_back(dx);
+                    local_y.push_back(radii[i]);
+                }
             }
         }
 
-        if (r_sec.size() < 5)
+        if (local_x.size() < 5)
             return deg_min;
 
-        double p95 = percentile(r_sec, 95.0);
-        double p5 = percentile(r_sec, 5.0);
-        double amp = p95 - p5;
+        int deg_hi = std::min(deg_max, static_cast<int>(local_x.size()) - 2);
+        if (deg_hi % 2 != 0)
+            deg_hi -= 1;
+        if (deg_hi < deg_min)
+            deg_hi = deg_min;
 
-        double sum = std::accumulate(r_sec.begin(), r_sec.end(), 0.0);
-        double mean_r = sum / r_sec.size();
+        std::vector<std::pair<int, double>> rmse_by_deg;
+        double best_rmse = 0.0;
+        int best_deg = deg_min;
+        for (int deg = deg_min; deg <= deg_hi; deg += 2)
+        {
+            std::vector<double> coefs = polyfit(local_x, local_y, deg);
+            double sse = 0.0;
+            for (size_t k = 0; k < local_x.size(); ++k)
+            {
+                double e = polyval(coefs, local_x[k]) - local_y[k];
+                sse += e * e;
+            }
+            double rmse = std::sqrt(sse / static_cast<double>(local_x.size()));
+            rmse_by_deg.push_back({deg, rmse});
+            if (deg == deg_min || rmse < best_rmse)
+            {
+                best_rmse = rmse;
+                best_deg = deg;
+            }
+        }
 
-        if (mean_r <= 0)
-            return deg_min;
-
-        double amp_norm = amp / mean_r;
-        int deg = static_cast<int>(std::round(amp_norm * amplitude_scale));
-        deg = std::max(deg_min, std::min(deg_max, deg));
-
-        if (deg % 2 != 0)
-            deg += 1; // Приведение к четной степени
-        return deg;
+        for (const auto &kv : rmse_by_deg)
+        {
+            if (kv.second <= best_rmse * (1.0 + deg_elbow_tol))
+                return kv.first; // правило "локтя": первая достаточно хорошая степень
+        }
+        return best_deg;
     }
 
 public:
     PatchApproximator(int n_patches = 8, int deg_min = 4, int deg_max = 14,
-                      double amplitude_scale = 180.0, double overlap_train = 15.0, double overlap_use = 5.0)
+                      double amplitude_scale = 180.0, double overlap_train = 15.0, double overlap_use = 5.0,
+                      double deg_elbow_tol = 0.05)
         : n_patches(n_patches), deg_min(deg_min), deg_max(deg_max),
-          amplitude_scale(amplitude_scale), overlap_train(overlap_train), overlap_use(overlap_use), is_fitted(false)
+          amplitude_scale(amplitude_scale), overlap_train(overlap_train), overlap_use(overlap_use),
+          deg_elbow_tol(deg_elbow_tol), is_fitted(false)
     {
 
         if (this->deg_min % 2 != 0)

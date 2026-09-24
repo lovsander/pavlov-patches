@@ -3,13 +3,16 @@
 #include <algorithm>
 #include <numeric>
 #include <stdexcept>
+#include <utility>
 
 PatchApproximator::PatchApproximator(int n_patches, int deg_min, int deg_max,
                                      double amplitude_scale,
-                                     double overlap_train, double overlap_use)
+                                     double overlap_train, double overlap_use,
+                                     double deg_elbow_tol)
     : n_patches(n_patches), deg_min(deg_min), deg_max(deg_max),
       amplitude_scale(amplitude_scale),
-      overlap_train(overlap_train), overlap_use(overlap_use) {
+      overlap_train(overlap_train), overlap_use(overlap_use),
+      deg_elbow_tol(deg_elbow_tol) {
     if (this->deg_min % 2 != 0) this->deg_min++;
     if (this->deg_max % 2 != 0) this->deg_max++;
 }
@@ -90,30 +93,60 @@ std::vector<double> PatchApproximator::polyfit(const std::vector<double>& x_norm
     return coefs;
 }
 
+// Политика степени: НАИМЕНЬШАЯ чётная степень, на которой RMSE обучающего окна
+// (half_sector + overlap_train) не хуже лучшей более чем на deg_elbow_tol.
+// Амплитудная шкала (P95-P5)/mean*amplitude_scale измеряла размах, а не
+// сложность формы, поэтому недооценивала узкие глубокие ямы и переоценивала
+// пологие широкие секторы — оставлена только как историческая метрика в Python.
 int PatchApproximator::estimate_degree(const std::vector<double>& angles,
                                        const std::vector<double>& radii,
                                        double center) const {
-    std::vector<double> r_sec;
-    for (size_t i = 0; i < angles.size(); ++i) {
-        double diff = angles[i] - center;
-        while (diff < -180.0) diff += 360.0;
-        while (diff > 180.0)  diff -= 360.0;
-        if (std::abs(diff) <= half_sector) {
-            r_sec.push_back(radii[i]);
+    double half_train = half_sector + overlap_train;
+
+    // Окно строим так же, как в fit(): кольцо, развёрнутое на ±360°.
+    std::vector<double> local_x_norm, local_y;
+    for (int shift : {-360, 0, 360}) {
+        for (size_t i = 0; i < angles.size(); ++i) {
+            double dx = angles[i] + shift - center;
+            if (dx >= -half_train && dx <= half_train) {
+                local_x_norm.push_back(dx / half_train);   // ∈ [-1, 1]
+                local_y.push_back(radii[i]);
+            }
         }
     }
-    if (r_sec.size() < 5) return deg_min;
+    size_t n_pts = local_x_norm.size();
+    if (n_pts < 5) return deg_min;
 
-    double p95 = percentile(r_sec, 95.0);
-    double p5  = percentile(r_sec, 5.0);
-    double mean_r = std::accumulate(r_sec.begin(), r_sec.end(), 0.0) / r_sec.size();
-    if (mean_r <= 0.0) return deg_min;
+    int deg_max_allowed = static_cast<int>(n_pts) - 2;
+    if (deg_max_allowed % 2 != 0) deg_max_allowed--;
+    if (deg_max_allowed < deg_min) deg_max_allowed = deg_min;
+    int deg_hi = std::min(deg_max, deg_max_allowed);
 
-    int deg = static_cast<int>(std::round(((p95 - p5) / mean_r) * amplitude_scale));
-    deg = std::max(deg_min, std::min(deg_max, deg));
-    if (deg % 2 != 0) deg++;
-    if (deg > deg_max) deg = deg_max;
-    return deg;
+    double best_rmse = 0.0, selected_rmse = 0.0;
+    int best_deg = deg_min, selected_deg = -1;
+    std::vector<std::pair<int, double>> rmse_by_deg;   // (deg, rmse)
+    for (int deg = deg_min; deg <= deg_hi; deg += 2) {
+        std::vector<double> coefs = polyfit(local_x_norm, local_y, deg);
+        double sse = 0.0;
+        for (size_t k = 0; k < n_pts; ++k) {
+            double e = polyval(coefs, local_x_norm[k]) - local_y[k];
+            sse += e * e;
+        }
+        double rmse = std::sqrt(sse / static_cast<double>(n_pts));
+        rmse_by_deg.emplace_back(deg, rmse);
+        if (deg == deg_min || rmse < best_rmse) { best_rmse = rmse; best_deg = deg; }
+    }
+    // Лучший берём по ВСЕМУ диапазону (как в Python), иначе допуск окажется
+    // слишком свободным на первых степенях.
+    for (const auto& kv : rmse_by_deg) {
+        if (kv.second <= best_rmse * (1.0 + deg_elbow_tol)) {
+            selected_deg = kv.first;
+            selected_rmse = kv.second;
+            break;
+        }
+    }
+    (void)selected_rmse;
+    return selected_deg < 0 ? best_deg : selected_deg;
 }
 
 void PatchApproximator::fit(const std::vector<double>& angles,

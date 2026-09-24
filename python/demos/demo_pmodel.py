@@ -4,11 +4,21 @@ demo_pmodel.py
 Полный цикл: fit → save → load → validate → summary → сравнение eval.
 """
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
+
 import numpy as np
 import pandas as pd
 
-from patch_approximator import PatchApproximator
-from pmodel import save_model, load_model, validate_model, summary
+from appa.core.patch_approximator import PatchApproximator
+from appa.io.pmodel import load_model, save_model, summary, validate_model
 
 
 # ============ Загрузка и очистка ============

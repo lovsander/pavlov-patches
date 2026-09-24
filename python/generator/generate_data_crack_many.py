@@ -8,9 +8,21 @@ N_POINTS_PER_SECTION точек создаётся для КАЖДОГО сеч�
 получается N_POINTS_PER_SECTION * N_SECTIONS строк.
 """
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
 
 # ============ ПАРАМЕТРЫ ============

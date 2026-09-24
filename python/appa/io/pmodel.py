@@ -55,6 +55,9 @@ def save_model(approx, filepath, meta=None):
             "overlap_use_deg": float(approx.overlap_use),
             "deg_min": int(approx.deg_min),
             "deg_max": int(approx.deg_max),
+            # политика степени: RMSE-«локоть» на обучающем окне
+            "deg_elbow_tol": float(getattr(approx, "deg_elbow_tol", 0.05)),
+            # историческая амплитудная шкала, на выбор степени не влияет
             "amplitude_scale": float(approx.amplitude_scale),
         },
         "patches": [],
@@ -88,7 +91,7 @@ def load_model(filepath):
     Загрузить модель из .pmodel.json.
     Возвращает PatchApproximator (fitted), готовый к eval().
     """
-    from patch_approximator import PatchApproximator
+    from ..core.patch_approximator import PatchApproximator
 
     filepath = Path(filepath)
     with filepath.open("r", encoding="utf-8") as f:
@@ -110,6 +113,8 @@ def load_model(filepath):
         overlap_train=float(g["overlap_train_deg"]),
         overlap_use=float(g["overlap_use_deg"]),
         phase_deg=float(g.get("phase_deg", 0.0)),
+        # старые файлы без поля допуска читаются как 0.05
+        deg_elbow_tol=float(g.get("deg_elbow_tol", 0.05)),
     )
 
     # Восстанавливаем состояние
@@ -207,20 +212,43 @@ def validate_model(filepath):
                 f"patch[{i}]: coefs len {n_coefs} != degree+1 {deg+1}"
             )
 
-        # Проверка соответствия degree от amplitude_norm
-        if "metrics" in p and "amplitude_norm" in p["metrics"] and "global" in data:
+        # Проверка политики степени.
+        # Новая политика (RMSE-«локоть») проверяется по сохранённым метрикам:
+        # выбранная степень должна быть допустимой, чётной и её RMSE не хуже
+        # лучшего RMSE более чем на допуск.
+        # Старые файлы (без rmse_best_mm) проверяются по историческому правилу
+        # «degree из amplitude_norm * amplitude_scale».
+        if "metrics" in p and "global" in data:
             g = data["global"]
-            amp_norm = float(p["metrics"]["amplitude_norm"])
-            scale = float(g.get("amplitude_scale", 180.0))
-            expected_deg = int(round(amp_norm * scale))
-            if expected_deg % 2 != 0:
-                expected_deg += 1
-            expected_deg = max(int(g["deg_min"]), min(int(g["deg_max"]), expected_deg))
-            if expected_deg != deg:
+            dmin = int(g["deg_min"])
+            dmax = int(g["deg_max"])
+            if deg % 2 != 0 or not (dmin <= deg <= dmax):
                 errors.append(
-                    f"patch[{i}]: degree {deg} != expected {expected_deg} "
-                    f"(amp_norm={amp_norm:.4f}, scale={scale})"
+                    f"patch[{i}]: degree {deg} вне политики "
+                    f"(чётная {dmin}..{dmax})"
                 )
+            m = p["metrics"]
+            if "rmse_best_mm" in m:
+                tol = float(g.get("deg_elbow_tol", 0.05))
+                limit = float(m["rmse_best_mm"]) * (1.0 + tol)
+                if float(m.get("rmse_selected_mm", limit)) > limit * (1.0 + 1e-9):
+                    errors.append(
+                        f"patch[{i}]: degree {deg} с RMSE "
+                        f"{m.get('rmse_selected_mm')} хуже допуска "
+                        f"{limit:.6f} (best={m['rmse_best_mm']}, tol={tol})"
+                    )
+            elif "amplitude_norm" in m:
+                amp_norm = float(m["amplitude_norm"])
+                scale = float(g.get("amplitude_scale", 180.0))
+                expected_deg = int(round(amp_norm * scale))
+                if expected_deg % 2 != 0:
+                    expected_deg += 1
+                expected_deg = max(dmin, min(dmax, expected_deg))
+                if expected_deg != deg:
+                    errors.append(
+                        f"patch[{i}]: degree {deg} != expected {expected_deg} "
+                        f"(legacy amp_norm={amp_norm:.4f}, scale={scale})"
+                    )
 
     return len(errors) == 0, errors
 
@@ -243,7 +271,8 @@ def summary(filepath):
     g = data["global"]
     print(f"n_patches: {g['n_patches']}")
     print(f"deg_min/max: {g['deg_min']}/{g['deg_max']}")
-    print(f"amplitude_scale: {g['amplitude_scale']}")
+    print(f"deg_elbow_tol: {g.get('deg_elbow_tol', 0.05)} (политика: RMSE-«локоть»)")
+    print(f"amplitude_scale: {g['amplitude_scale']} (legacy, степень не выбирает)")
     print(f"phase_deg: {g.get('phase_deg', 0.0)}")
 
     print("\nPatches:")

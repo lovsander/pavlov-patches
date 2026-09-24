@@ -30,7 +30,7 @@ Distinctive features:
 
 | Path | Purpose |
 |------|---------|
-| `python/` | Reference implementation + generator, visualisation, research archive, benchmarks |
+| `python/` | Reference implementation: package `appa/` (`core`, `io`, `analysis`, `viz`, `report`), runnable entry points in `studies/`, `demos/`, `generator/`, and the `deprecated/` archive |
 | `cpp/`  | C++17 port (CMake) |
 | `go/`   | Go port |
 | `docs/` | Method description & presentation assets |

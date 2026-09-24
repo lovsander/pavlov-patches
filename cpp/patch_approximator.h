@@ -17,7 +17,11 @@ class PatchApproximator {
 private:
     int n_patches;
     int deg_min, deg_max;
+    // amplitude_scale — историческая амплитудная шкала: на выбор степени
+    // больше НЕ влияет, хранится для совместимости вызовов и отчётов.
     double amplitude_scale, overlap_train, overlap_use, half_sector;
+    // допуск политики степени (RMSE-«локоть»), доли
+    double deg_elbow_tol;
     std::vector<double> centers;
     std::vector<Patch> patches;
 
@@ -35,7 +39,8 @@ public:
     PatchApproximator(int n_patches = 8, int deg_min = 4, int deg_max = 14,
                       double amplitude_scale = 180.0,
                       double overlap_train = 15.0,
-                      double overlap_use = 5.0);
+                      double overlap_use = 5.0,
+                      double deg_elbow_tol = 0.05);
 
     void fit(const std::vector<double>& angles, const std::vector<double>& radii);
     std::vector<double> eval(const std::vector<double>& eval_angles) const;
