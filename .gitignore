@@ -62,3 +62,6 @@ report_*.txt
 *.svg
 !docs/assets/**/*.png
 !docs/assets/**/*.svg
+
+# Local session handoff notes (not part of the public repo)
+CONTEXT.md
