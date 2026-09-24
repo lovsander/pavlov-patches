@@ -9,8 +9,16 @@ compare_patch_counts.py
 2. Очистка выбросов (OutlierCleaner).
 3. Обучение PatchApproximator для каждого варианта N (число патчей),
    входящего в CONFIG['variants'].
+   ВАЖНО: обучение идёт по ВСЕМ точкам из CSV (после очистки выбросов) —
+   каждая точка файла участвует в подгонке. Сетка для отрисовки
+   (CONFIG['grid_points']) в обучении не участвует вообще.
 4. Отрисовка: 4 сечения в сетке 2x2, на каждом наложены кривые результата
    для каждого N; внизу — средняя RMSE по всем показанным сечениям.
+
+Метрика (RMSE/MAE) по умолчанию считается по реальным точкам из файла
+(CONFIG['metric_on'] = "data"), а CONFIG['grid_points'] влияет ТОЛЬКО на то,
+сколькими точками рисуется кривая. Старое поведение (метрика по сетке)
+возвращается значением metric_on = "grid".
 
 Все параметры метода задаются в CONFIG (число патчей, deg_min/deg_max,
 amplitude_scale, перекрытия обучения/применения и т.д.).
@@ -36,8 +44,22 @@ CONFIG = {
     # --- данные ---
     "csv": "synthetic_data.csv",
     "sections": [0, 1, 2, 3],      # какие сечения показать (первым берём 4)
-    "grid_points": 1440,           # точек сетки углов для отрисовки/оценки
     "ideal_column": "radius_ideal_mm",
+
+    # --- отрисовка ---
+    # grid_points задаёт ТОЛЬКО плотность кривых на графике (сколько точек
+    # берётся, чтобы нарисовать линию аппроксимации и кривые невязок).
+    # На обучение это значение не влияет: аппроксиматор обучается на всех
+    # точках CSV, прошедших очистку выбросов.
+    "grid_points": 1440,
+
+    # --- метрика (RMSE/MAE) ---
+    # "data" — по реальным точкам из файла (честная метрика; по умолчанию)
+    # "grid" — по равномерной сетке отрисовки (прежнее поведение)
+    "metric_on": "data",
+    # "clean" — только точки, прошедшие очистку выбросов
+    # "all"   — все точки файла, включая отбракованные выбросы
+    "metric_scope": "clean",
 
     # --- очистка выбросов ---
     "cleaner": {
@@ -172,22 +194,49 @@ def load_and_clean(csv_path, cleaner_cfg, ideal_column):
 # ОБУЧЕНИЕ И ОЦЕНКА
 # ============================================================================
 
-def evaluate_variant(section, params, angles_grid):
+def evaluate_variant(section, params, angles_grid,
+                     metric_on="data", metric_scope="clean"):
     """
-    Обучает PatchApproximator variant-параметрами на очищенном сечении
-    и считает RMSE по отношению к эталону на сетке углов.
+    Обучает PatchApproximator variant-параметрами и считает метрики.
 
-    Возвращает (fitted, rmse, info), где info содержит степени патчей и
-    геометрию секторов (half_sector/half_train/half_use).
+    ОБУЧЕНИЕ: идёт по ВСЕМ точкам файла, прошедшим очистку выбросов
+    (section["angles"], section["radii"]). Сетка отрисовки angles_grid
+    в обучение не попадает.
+
+    angles_grid используется ТОЛЬКО для отрисовки: по нему считается
+    fitted_grid — та кривая, которую рисуем на графике.
+
+    МЕТРИКИ (RMSE/MAE/max) считаются:
+      metric_on="data" — по реальным точкам файла (по умолчанию);
+      metric_on="grid" — по равномерной сетке отрисовки (прежнее поведение).
+    metric_scope выбирает набор точек: "clean" (после очистки) или "all".
+
+    Возвращает (fitted_grid, rmse, info).
     """
     approx = make_approximator(params)
-    approx.fit(section["angles"], section["radii"])
+    approx.fit(section["angles"], section["radii"])   # ← все точки из файла
 
-    fitted = approx.eval(angles_grid)
+    fitted_grid = approx.eval(angles_grid)            # ← только для отрисовки
 
-    ideal_grid = np.interp(angles_grid,
-                           section["ideal_deg"], section["ideal_r"])
-    rmse = float(np.sqrt(np.mean((fitted - ideal_grid) ** 2)))
+    # --- точки, по которым считаем метрику ---
+    if metric_scope == "all":
+        a_m, r_m = section["angles_all"], section["radii_all"]
+    else:
+        a_m, r_m = section["angles"], section["radii"]
+
+    if metric_on == "grid":
+        fitted_m = fitted_grid
+        ideal_m = np.interp(angles_grid,
+                            section["ideal_deg"], section["ideal_r"])
+    else:
+        fitted_m = approx.eval(a_m)
+        ideal_m = np.interp(a_m, section["ideal_deg"], section["ideal_r"])
+
+    valid = np.isfinite(fitted_m) & np.isfinite(ideal_m)
+    diff = fitted_m[valid] - ideal_m[valid]
+    rmse = float(np.sqrt(np.mean(diff ** 2)))
+    mae = float(np.mean(np.abs(diff)))
+    max_err = float(np.max(np.abs(diff)))
 
     info = {
         "degrees": approx.get_degrees(),
@@ -195,8 +244,14 @@ def evaluate_variant(section, params, angles_grid):
         "half_train": approx.half_sector_ + approx.overlap_train,
         "half_use": approx.half_sector_ + approx.overlap_use,
         "n_patches": approx.n_patches,
+        "n_train": int(len(section["angles"])),
+        "n_metric": int(valid.sum()),
+        "metric_on": metric_on,
+        "metric_scope": metric_scope,
+        "mae": mae,
+        "max_err": max_err,
     }
-    return fitted, rmse, info
+    return fitted_grid, rmse, info
 
 
 # ============================================================================
@@ -213,6 +268,11 @@ def main():
     print(f"Данные:    {csv_path.name}")
     print(f"Сечения:   {cfg['sections']}")
     print(f"Варианты N: {[v['n_patches'] for v in cfg['variants']]}")
+    print(f"Обучение:  по ВСЕМ точкам CSV после очистки выбросов")
+    print(f"Метрика:   {cfg.get('metric_on', 'data')} "
+          f"(scope={cfg.get('metric_scope', 'clean')})")
+    print(f"Сетка отрисовки: {cfg['grid_points']} точек "
+          f"(только рисование кривых, на обучение не влияет)")
 
     # --- загрузка + очистка ---
     sections = load_and_clean(csv_path, cfg["cleaner"], cfg["ideal_column"])
@@ -225,6 +285,7 @@ def main():
               f"выбросов {s['n_out']}/{s['n_total']} ({pct:.1f}%), "
               f"чистых {len(s['angles'])}")
 
+    # --- сетка ТОЛЬКО для отрисовки (в обучении НЕ участвует) ---
     angles_grid = np.linspace(0.0, 360.0, cfg["grid_points"], endpoint=False)
 
     # --- обучение по всем сечениям x вариантам ---
@@ -238,10 +299,17 @@ def main():
         print(f"\n=== ВАРИАНТ: {variant['label']} (N={params['n_patches']}) ===")
         for sid in cfg["sections"]:
             fitted, rmse, info = evaluate_variant(
-                sections[sid], params, angles_grid)
+                sections[sid], params, angles_grid,
+                metric_on=cfg.get("metric_on", "data"),
+                metric_scope=cfg.get("metric_scope", "clean"))
             results[sid].append({"fitted": fitted, "rmse": rmse, "info": info})
-            print(f"  Сечение {sid}: RMSE={rmse:.5f}  "
-                  f"half_sector={info['half_sector']:.2f}° "
+            src = ("точкам файла" if info["metric_on"] == "data"
+                   else "сетке отрисовки")
+            print(f"  Сечение {sid}: RMSE={rmse:.5f}  MAE={info['mae']:.5f}  "
+                  f"max={info['max_err']:.5f}   [{info['metric_scope']}: "
+                  f"обучение {info['n_train']} тчк, "
+                  f"метрика по {info['n_metric']} тчк ({src})]")
+            print(f"      half_sector={info['half_sector']:.2f}° "
                   f"half_use={info['half_use']:.2f}°  "
                   f"deg={info['degrees']}")
 
@@ -251,7 +319,12 @@ def main():
         for vi in range(len(cfg["variants"]))
     ]
 
-    print("\n=== СРЕДНЯЯ RMSE ПО СЕЧЕНИЯМ ===")
+    # подпись для заголовков: по каким точкам считается метрика
+    metric_label = ("по точкам файла"
+                    if cfg.get("metric_on", "data") == "data"
+                    else "по сетке отрисовки")
+
+    print(f"\n=== СРЕДНЯЯ RMSE ({metric_label}) ===")
     for vi, variant in enumerate(cfg["variants"]):
         print(f"  {variant['label']:>10}: {mean_rmse[vi]:.5f} мм")
 
@@ -314,7 +387,8 @@ def main():
         for i, v in enumerate(cfg["variants"])
     )
     fig.suptitle(
-        "Сравнение числа патчей на 4 сечениях — средняя RMSE:  " + summary,
+        f"Сравнение числа патчей на {n_sec} сечениях — средняя RMSE "
+        f"{metric_label}:  " + summary,
         fontsize=12, y=0.995)
 
     plt.tight_layout(rect=(0, 0, 1, 0.97))
@@ -333,6 +407,16 @@ def main():
         for ax, sid in zip(axes2, cfg["sections"]):
             s = sections[sid]
             ideal_grid = np.interp(angles_grid, s["ideal_deg"], s["ideal_r"])
+
+            # фон: реальные отклонения измерений от эталона (не зависят от N).
+            # Это те самые точки, по которым считается RMSE.
+            if cfg.get("metric_scope", "clean") == "all":
+                a_m, r_m = s["angles_all"], s["radii_all"]
+            else:
+                a_m, r_m = s["angles"], s["radii"]
+            ax.plot(a_m, r_m - np.interp(a_m, s["ideal_deg"], s["ideal_r"]),
+                    ".", color="gray", markersize=data_ms, alpha=data_alpha,
+                    zorder=0, label="данные − эталон")
 
             for vi, variant in enumerate(cfg["variants"]):
                 r = results[sid][vi]
@@ -353,8 +437,11 @@ def main():
         for ax in axes2[n_sec:]:
             ax.axis("off")
 
-        fig2.suptitle("Невязка аппроксимации к эталону — средняя RMSE:  "
-                      + summary, fontsize=12, y=0.995)
+        fig2.suptitle("Невязка аппроксимации к эталону — средняя RMSE "
+                      f"{metric_label}:  " + summary
+                      + "   | кривые — по сетке отрисовки, "
+                        "точки — измерения из файла",
+                      fontsize=12, y=0.995)
         plt.tight_layout(rect=(0, 0, 1, 0.97))
         out2 = resolve_path(cfg["output_residuals"])
         plt.savefig(out2, dpi=cfg["dpi"], bbox_inches="tight")
