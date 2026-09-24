@@ -27,13 +27,9 @@ vc140.pdb
 .idea/
 *.user
 *.suo
-# Shared VS Code config is intentionally tracked:
-!.vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/c_cpp_properties.json
+# Machine-specific VS Code settings (absolute paths) are ignored.
+# Shared/team config (tasks, launch, extensions, c_cpp_properties) is tracked.
+.vscode/settings.json
 
 # ==============================================================================
 # Python

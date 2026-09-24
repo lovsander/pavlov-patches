@@ -3,8 +3,9 @@ message: "If you use this software, please cite it as below."
 title: "pavlov-patches: Adaptive Poly-Patch Approximation (APPA)"
 type: software
 authors:
-  - family-names: "<<Family>>"
-    given-names: "<<Given>>"
+  - family-names: "Pavlov"
+    given-names: "Alexander"
+    alias: "lovsander"
     # orcid: "https://orcid.org/0000-0000-0000-0000"
 repository-code: "https://github.com/lovsander/pavlov-patches"
 license: MIT
