@@ -168,6 +168,30 @@ def base_drift(ref, other, grid, cfg, pits):
     return (float(np.max(dy)) if outside.any() else 0.0, rel)
 
 
+def sweep_orders(cfg, sections, pits_by_section, orders, grid):
+    """
+    Развёртка по числу гармоник: средние RMSE и ошибка у ям для трёх режимов.
+
+    Отвечает на вопрос «при каком числе гармоник Фурье (+фичер) догоняет патчи»
+    и «узкое место — ямы или сама база». Возвращает
+    {order: {"fourier": (rmse, peak), "joint": (...), "masked": (...)}}.
+    """
+    out = {}
+    for order in orders:
+        acc = {m: [] for m in ("fourier", "joint", "masked")}
+        for sid in cfg["sections"]:
+            s = sections[sid]
+            pits = pits_by_section[sid]
+            for mode in acc:
+                model = fit_fourier_pit(cfg, s["angles_clean"],
+                                        s["radii_clean"], pits, order, mode)
+                acc[mode].append(measure(model, grid, s["ideal_grid"], cfg, pits))
+        out[order] = {m: (float(np.mean([r["rmse"] for r in rs])),
+                          float(np.mean([r["peak_at_pit"] for r in rs])))
+                      for m, rs in acc.items()}
+    return out
+
+
 def crop_data(cfg, sections, zones_by_section, models, sids, crop_half_deg,
               n=601):
     """

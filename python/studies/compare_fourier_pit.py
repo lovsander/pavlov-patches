@@ -27,15 +27,16 @@ except Exception:
 import numpy as np
 
 from appa.analysis.fourier_study import (base_drift, crop_data, dist_to_pits,
-                                         fit_fourier_pit, measure)
+                                         fit_fourier_pit, measure, sweep_orders)
 from appa.analysis.layout import section_crack_zones
 from appa.analysis.pit_study import fit_variant
 from appa.analysis.pit_study import measure as measure_patches
+from appa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
 from appa.io.dataset import attach_ideal_grid, load_sections
 from appa.paths import resolve_path
-from appa.report.fourier_report import (report_config, report_table,
-                                        report_verdict)
-from appa.viz.fourier_figs import plot_fourier_pit
+from appa.report.fourier_report import (report_config, report_sweep,
+                                        report_table, report_verdict)
+from appa.viz.fourier_figs import plot_fourier_pit, plot_fourier_sweep
 
 CONFIG = {
     "csv": "synthetic_data.csv",
@@ -52,11 +53,8 @@ CONFIG = {
                  "smooth_deg": 2.0, "k": 5.5, "min_zone_deg": 2.0},
 
     # --- фичер ямы: та же форма и окно, что у патчей ---
-    "sigma_deg": 3.0,
-    "pit_core_sigma": 2.0,
-    "pit_window_sigma": 3.2,
-    "pit_min_amp": 3e-3,       # нужен фичеру патчей (pit_study.fit_variant)
-    "tapering": True,
+    # --- фичер ямы: единый источник параметров (appa.core.pit_feature) ---
+    **PIT_DEFAULTS,
 
     # --- модель патчей ---
     "model": {"deg_min": 4, "deg_max": 14, "amplitude_scale": 180.0,
@@ -65,10 +63,11 @@ CONFIG = {
     "cleaner": {"mode": "auto", "auto": {"method": "iqr"}},
 
     "crop_margin_deg": 12.0,
+    "orders_sweep": [4, 6, 8, 10, 12, 16, 20, 24],
     "dpi": 160,
     "out_figure": "fourier_vs_patches.png",
+    "out_sweep": "fourier_order_sweep.png",
 }
-
 
 def build_models(cfg, section, pits):
     """Все варианты модели для одного сечения (ключ -> объект с .eval)."""
@@ -83,9 +82,9 @@ def build_models(cfg, section, pits):
     models["patches"] = fit_variant(cfg, section, pits, "pit_win")
     return models
 
-
 def main():
     cfg = CONFIG
+    validate_pit_cfg(cfg)
     grid = np.linspace(0.0, 360.0, cfg["grid_points"], endpoint=False)
     sections = load_sections(resolve_path(cfg["csv"]), cfg["ideal_column"],
                              cfg["cleaner"])
@@ -128,10 +127,21 @@ def main():
                       cfg["sections"], win + cfg["crop_margin_deg"])
     plot_fourier_pit(cfg, sections, zones_by_section, crops, rows,
                      resolve_path(cfg["out_figure"]))
-    report_verdict(cfg, rows)
-    print(f"\nРисунок: {cfg['out_figure']}")
 
+    ref = {v: (float(np.mean([rows[s]["metrics"][v]["rmse"]
+                              for s in cfg["sections"]])),
+               float(np.mean([rows[s]["metrics"][v]["peak_at_pit"]
+                              for s in cfg["sections"]])),
+               float(np.mean([rows[s]["metrics"][v]["n_coefs"]
+                              for s in cfg["sections"]])))
+           for v in ("poly", "patches")}
+    sweep = sweep_orders(cfg, sections, pits_by_section, cfg["orders_sweep"],
+                         grid)
+    report_sweep(cfg, sweep, ref)
+    plot_fourier_sweep(cfg, sweep, ref, resolve_path(cfg["out_sweep"]))
+
+    report_verdict(cfg, rows)
+    print(f"\nРисунки: {cfg['out_figure']}, {cfg['out_sweep']}")
 
 if __name__ == "__main__":
     main()
-

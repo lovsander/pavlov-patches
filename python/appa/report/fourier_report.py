@@ -31,6 +31,28 @@ def report_config(cfg, sections, zones_by_section):
               + ", ".join(f"{0.5 * (a + b):.2f}°" for a, b in zz))
 
 
+def report_sweep(cfg, sweep, ref):
+    """Печать развёртки по числу гармоник + сравнение с нашими значениями."""
+    print("\nРазвёртка по числу гармоник (средние по сечениям, мм):")
+    print(f"  {'K гарм.':>8} {'Фурье':>9} {'+ямы общая':>11} {'+ямы слепой':>12} "
+          f"{'у ям: Фурье':>12} {'+общая':>8} {'+слепой':>9} {'коэф.':>6}")
+    for order, res in sweep.items():
+        n_coef = 2 * order + 1
+        print(f"  {order:>8} {res['fourier'][0]:>9.4f} {res['joint'][0]:>11.4f} "
+              f"{res['masked'][0]:>12.4f} {res['fourier'][1]:>12.4f} "
+              f"{res['joint'][1]:>8.4f} {res['masked'][1]:>9.4f} {n_coef:>6}")
+    print(f"  наши значения: патчи-поли {ref['poly'][0]:.4f} "
+          f"(у ям {ref['poly'][1]:.4f}; {ref['poly'][2]:.0f} коэф.), "
+          f"патчи+ямы {ref['patches'][0]:.4f} (у ям {ref['patches'][1]:.4f}; "
+          f"{ref['patches'][2]:.0f} коэф. + амплитуды ям)")
+    best = min(sweep.items(), key=lambda kv: kv[1]["masked"][0])
+    print(f"  лучший «Фурье + фичер» (K = {best[0]}, "
+          f"{2 * best[0] + 1} коэффициентов): RMSE "
+          f"{best[1]['masked'][0]:.4f} мм — "
+          f"{100.0 * (best[1]['masked'][0] / ref['patches'][0] - 1.0):+.0f}% "
+          f"к патчам+ямы")
+
+
 def report_table(cfg, rows, drift):
     """Таблицы: RMSE/пик у ям по вариантам + дрейф Фурье-коэффициентов."""
     order = [v for v in VARIANT_ORDER if v in rows[cfg["sections"][0]]["metrics"]]

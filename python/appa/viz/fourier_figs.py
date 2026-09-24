@@ -27,6 +27,64 @@ FOURIER_STYLE = {
 }
 
 
+def plot_fourier_sweep(cfg, sweep, ref, out_path):
+    """
+    RMSE против числа гармоник: чистый Фурье, Фурье+ямы (общая подгонка),
+    Фурье(слепой)+ямы; горизонтальные линии — наши варианты патчей.
+
+    Это и есть ответ на «а может, Фурье+фичер достаточно»: видно, при каком
+    числе гармоник Фурье доходит до уровня патчей и где упирается.
+    """
+    orders = sorted(sweep)
+    fig, axes = plt.subplots(1, 2, figsize=(15.0, 5.2))
+
+    ax = axes[0]
+    ax.plot(orders, [sweep[o]["fourier"][0] for o in orders], "o-",
+            color=FOURIER_STYLE["fourier6"]["color"], label="Фурье (без ям)")
+    ax.plot(orders, [sweep[o]["joint"][0] for o in orders], "s-",
+            color=FOURIER_STYLE["joint"]["color"],
+            label="Фурье + ямы, общая подгонка")
+    ax.plot(orders, [sweep[o]["masked"][0] for o in orders], "^-",
+            color=FOURIER_STYLE["masked"]["color"],
+            label="Фурье (ям не видит) + ямы фичером")
+    ax.axhline(ref["poly"][0], color="#0072B2", ls="--", lw=1.3,
+               label=f"патчи-поли: {ref['poly'][0]:.4f} мм")
+    ax.axhline(ref["patches"][0], color="#0072B2", ls="-", lw=1.6,
+               label=f"патчи + ямы: {ref['patches'][0]:.4f} мм "
+                     f"({ref['patches'][2]:.0f} коэф.)")
+    ax.set_yscale("log")
+    ax.set_xlabel("Число гармоник Фурье")
+    ax.set_ylabel("средняя RMSE, мм (лог. шкала)")
+    ax.set_title("Точность по кольцу: ряд против патчей", fontsize=10.5)
+    ax.grid(alpha=0.3, which="both")
+    ax.legend(fontsize=8, loc="best")
+
+    ax = axes[1]
+    ax.plot(orders, [sweep[o]["fourier"][1] for o in orders], "o-",
+            color=FOURIER_STYLE["fourier6"]["color"], label="Фурье (без ям)")
+    ax.plot(orders, [sweep[o]["joint"][1] for o in orders], "s-",
+            color=FOURIER_STYLE["joint"]["color"],
+            label="Фурье + ямы, общая подгонка")
+    ax.plot(orders, [sweep[o]["masked"][1] for o in orders], "^-",
+            color=FOURIER_STYLE["masked"]["color"],
+            label="Фурье (ям не видит) + ямы фичером")
+    ax.axhline(ref["patches"][1], color="#0072B2", ls="-", lw=1.6,
+               label=f"патчи + ямы: {ref['patches'][1]:.4f} мм")
+    ax.set_xlabel("Число гармоник Фурье")
+    ax.set_ylabel("ошибка в окне ямы, мм")
+    ax.set_title("Главное: ошибка у ям", fontsize=10.5)
+    ax.grid(alpha=0.3)
+    ax.legend(fontsize=8, loc="best")
+
+    fig.suptitle("Фурье малой степени + фичер ям: развёртка по числу гармоник "
+                 f"(средние по сечениям {cfg['sections']}; окно фичера "
+                 f"±{cfg['pit_window_sigma'] * cfg['sigma_deg']:.1f}°)",
+                 fontsize=11.5)
+    plt.tight_layout(rect=(0, 0, 1, 0.93))
+    plt.savefig(out_path, dpi=cfg["dpi"], bbox_inches="tight")
+    plt.close(fig)
+
+
 def plot_fourier_pit(cfg, sections, zones_by_section, crops, rows, out_path,
                      n_harm=6):
     """
