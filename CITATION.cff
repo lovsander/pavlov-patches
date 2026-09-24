@@ -6,7 +6,7 @@ authors:
   - family-names: "<<Family>>"
     given-names: "<<Given>>"
     # orcid: "https://orcid.org/0000-0000-0000-0000"
-repository-code: "https://github.com/<<user>>/pavlov-patches"
+repository-code: "https://github.com/lovsander/pavlov-patches"
 license: MIT
 keywords:
   - polynomial approximation
