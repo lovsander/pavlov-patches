@@ -81,6 +81,7 @@ python studies/verify_port_figure.py --cpp-dir samples/<name>_cpp   # -> python/
 | `rust/` | Rust port (cargo, **no crates**, offline build): vectors + pipeline + `cargo test` |
 | `pascal/` | Free Pascal port (FPC 3.2, no units beyond RTL): vectors + pipeline + `selftest` |
 | `swift/` | Swift port (SwiftPM, no packages; needs `SDKROOT` on Windows): vectors + pipeline + `swift test` |
+| `julia/` | Julia port (package `Pappa`, **stdlib only**, works offline without `Pkg.instantiate`): vectors + pipeline + `test/runtests.jl` via `build_julia.ps1` |
 | `docs/` | Method description, presentation assets, embedded (MCU) feasibility study |
 | `spec/` | Model document schema + conformance vectors |
 

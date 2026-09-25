@@ -1,0 +1,15 @@
+name = "Pappa"
+uuid = "6f1a2b3c-4d5e-4f60-8a9b-0c1d2e3f4a5b"
+authors = ["pavlov-patches"]
+version = "0.1.0"
+
+# Зависимостей НЕТ: JSON, CSV, статистика и ISO-дата — свои.
+# Поэтому пакет запускается без установки чего-либо (julia --project=.).
+# Зависимостей (внешних пакетов) НЕТ: JSON, CSV, статистика и ISO-дата — свои.
+# Test — стандартная библиотека, объявлена в deps, чтобы `julia --project=julia
+# julia/test/runtests.jl` работал без Pkg-резолва (сеть не нужна вовсе).
+[deps]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+julia = "1.6"
