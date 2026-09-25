@@ -53,7 +53,8 @@ EXIT_OK, EXIT_MISMATCH, EXIT_NO_DATA = 0, 1, 2
 def main():
     ap = argparse.ArgumentParser(description="Сверить порт C++ с референсом Python")
     ap.add_argument("--py-dir", default=None, help="папка образца, собранного Python")
-    ap.add_argument("--cpp-dir", default=None, help="папка образца, собранного портом")
+    ap.add_argument("--cpp-dir", default=None,
+                    help="папка образца, собранного портом (C++, Go, ...)")
     ap.add_argument("--report-dir", default=None, help="куда писать report/verify.json")
     ap.add_argument("--tol", type=float, default=None, help="допуск |Δ| контура, мм")
     args = ap.parse_args()

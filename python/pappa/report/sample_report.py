@@ -56,9 +56,9 @@ def print_built_sample(root_dir, rows, manifest, docs=()):
               + (f", ошибки: {bad}" if bad else ""))
 
 
-def print_verify(rows, summary, tol_mm, py_name, cpp_name, report_path=None):
+def print_verify(rows, summary, tol_mm, py_name, port_name, report_path=None):
     """
-    Таблица сверки порта с референсом (Python <-> C++).
+    Таблица сверки порта с референсом (Python <-> порт: C++, Go, ...).
 
     rows    — по сечению: section_id, height_mm, degrees_equal, pits_py, pits_cpp,
               max_delta, rmse_py, rmse_cpp, ok;
@@ -66,7 +66,7 @@ def print_verify(rows, summary, tol_mm, py_name, cpp_name, report_path=None):
     """
     bar = "=" * 104
     print(bar)
-    print(f"СВЕРКА ПОРТА: Python «{py_name}» <-> C++ «{cpp_name}»")
+    print(f"СВЕРКА ПОРТА: Python «{py_name}» <-> порт «{port_name}»")
     print(bar)
     print(f"Допуск на расхождение контура: {tol_mm:g} мм")
     print()

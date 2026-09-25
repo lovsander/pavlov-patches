@@ -16,6 +16,19 @@ type Patch struct {
 	NPoints       int
 	PitOffsetsDeg []float64 // смещения центров ям в локальной системе патча
 	PitCoefs      []float64 // амплитуды оконных гауссов
+
+	// Метрики (пишутся в документ .pappa.json как metrics/stats) — те же
+	// определения, что в python/pappa/core/patch_approximator.py.
+	AmplitudeMM    float64 // P95 - P5 по точкам своего сектора (справочная)
+	MeanRadiusMM   float64
+	AmplitudeNorm  float64
+	RMSESelectedMM float64 // RMSE выбранной степени на обучающем окне
+	RMSEBestMM     float64 // лучший RMSE по всем рассмотренным степеням
+	NTrainPoints   int
+	RMSEMm         float64 // статистика остатков обучающего окна
+	MAEMm          float64
+	MaxErrMM       float64
+	Correlation    float64
 }
 
 // ModelOptions — параметры модели (значения по умолчанию = MODEL_DEFAULTS).
@@ -140,9 +153,10 @@ func (m *Model) weight(dDeg, halfUse float64) float64 {
 }
 
 // estimateDegree — правило «локтя»: наименьшая чётная степень, на которой RMSE
-// обучающего окна не хуже лучшей более чем на DegElbowTol.
+// обучающего окна не хуже лучшей более чем на DegElbowTol. Возвращает степень,
+// число точек окна, RMSE выбранной и лучшей степени.
 func (m *Model) estimateDegree(angles, radii []float64, center,
-	halfTrain float64) (int, int) {
+	halfTrain float64) (int, int, float64, float64) {
 
 	var xs, ys []float64
 	for _, shift := range []float64{-360, 0, 360} {
@@ -156,7 +170,7 @@ func (m *Model) estimateDegree(angles, radii []float64, center,
 	}
 	n := len(xs)
 	if n < 5 {
-		return m.Opt.DegMin, 0
+		return m.Opt.DegMin, 0, 0, 0
 	}
 
 	bestDeg, bestRMSE := m.Opt.DegMin, math.Inf(1)
@@ -184,10 +198,31 @@ func (m *Model) estimateDegree(angles, radii []float64, center,
 	limit := bestRMSE * (1 + m.Opt.DegElbowTol)
 	for _, res := range results { // строки идут по возрастанию степени
 		if res.rmse <= limit {
-			return res.deg, n
+			return res.deg, n, res.rmse, bestRMSE
 		}
 	}
-	return bestDeg, n
+	return bestDeg, n, bestRMSE, bestRMSE
+}
+
+// sectorMetrics — справочные метрики сектора: P95-P5 по точкам своего сектора
+// (амплитудная шкала оставлена только как метрика, степень она не выбирает).
+func (m *Model) sectorMetrics(angles, radii []float64, center float64) (float64, float64) {
+	var sec []float64
+	for i := range angles {
+		if CircDist(angles[i], center) <= m.HalfSect {
+			sec = append(sec, radii[i])
+		}
+	}
+	if len(sec) < 5 {
+		return 0, 0
+	}
+	amp := PercentileLinear(sec, 95) - PercentileLinear(sec, 5)
+	mean := 0.0
+	for _, v := range sec {
+		mean += v
+	}
+	mean /= float64(len(sec))
+	return amp, mean
 }
 
 // Fit — обучение модели (коэффициенты патчей и термины фичера).
@@ -224,7 +259,7 @@ func (m *Model) Fit(angles, radii []float64) error {
 
 	m.Patches = m.Patches[:0]
 	for _, c := range m.Centers {
-		deg, _ := m.estimateDegree(angles, radii, c, halfTrain)
+		deg, nTrain, rmseSelected, rmseBest := m.estimateDegree(angles, radii, c, halfTrain)
 
 		var xs, ys []float64
 		for i := range anglesExt {
@@ -276,10 +311,60 @@ func (m *Model) Fit(angles, radii []float64) error {
 			}
 		}
 
+		// Метрики и статистика остатков (как metrics/stats в документе).
+		amp, meanSec := m.sectorMetrics(angles, radii, c)
+		ampNorm := 0.0
+		if meanSec > 0 {
+			ampNorm = amp / meanSec
+		}
+		fitVals := make([]float64, len(xs))
+		for i := range xs {
+			v := Polyval(polyCoef, xs[i])
+			for j, off := range keptOffsets {
+				dDeg := math.Abs(xs[i]-off/halfTrain) * halfTrain
+				v += keptCoefs[j] * m.PitShapeDeg(dDeg)
+			}
+			fitVals[i] = v
+		}
+		sse, sae, maxErr := 0.0, 0.0, 0.0
+		for i := range xs {
+			e := fitVals[i] - ys[i]
+			sse += e * e
+			sae += math.Abs(e)
+			maxErr = math.Max(maxErr, math.Abs(e))
+		}
+		n := float64(len(xs))
+		rmse := math.Sqrt(sse / n)
+		mae := sae / n
+
+		// корреляция модель/данные по обучающему окну
+		mf, my := 0.0, 0.0
+		for i := range xs {
+			mf += fitVals[i]
+			my += ys[i]
+		}
+		mf /= n
+		my /= n
+		cov, vf, vy := 0.0, 0.0, 0.0
+		for i := range xs {
+			df := fitVals[i] - mf
+			dy := ys[i] - my
+			cov += df * dy
+			vf += df * df
+			vy += dy * dy
+		}
+		corr := 0.0
+		if vf > 0 && vy > 0 {
+			corr = cov / math.Sqrt(vf*vy)
+		}
+
 		m.Patches = append(m.Patches, Patch{
 			Center: c, HalfSector: m.HalfSect, HalfTrain: halfTrain, HalfUse: halfUse,
 			Coefs: polyCoef, Degree: deg, NPoints: len(xs),
 			PitOffsetsDeg: keptOffsets, PitCoefs: keptCoefs,
+			AmplitudeMM: amp, MeanRadiusMM: meanSec, AmplitudeNorm: ampNorm,
+			RMSESelectedMM: rmseSelected, RMSEBestMM: rmseBest, NTrainPoints: nTrain,
+			RMSEMm: rmse, MAEMm: mae, MaxErrMM: maxErr, Correlation: corr,
 		})
 	}
 	m.Fitted = true
