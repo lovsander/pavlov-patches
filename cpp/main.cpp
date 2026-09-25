@@ -137,6 +137,7 @@ void print_usage() {
         "  --overlap-train X     перекрытие обучения, ° (15)\n"
         "  --overlap-use X       перекрытие применения, ° (5)\n"
         "  --deg-elbow-tol X     допуск правила «локтя» (0.05)\n"
+        "  --deg-floor-mm X      абсолютный пол RMSE, мм (0 = выключен)\n"
         "Очистка (авто-iqr, штатный режим пайплайна):\n"
         "  --baseline-deg X      окно снятия формы, ° (1.0)\n"
         "  --iqr-k X             множитель IQR, усы Тьюки (3.0)\n"
@@ -173,6 +174,7 @@ int main(int argc, char** argv) {
             else if (a == "--overlap-train") opt.overlap_train = std::stod(need_value(i, a));
             else if (a == "--overlap-use") opt.overlap_use = std::stod(need_value(i, a));
             else if (a == "--deg-elbow-tol") opt.deg_elbow_tol = std::stod(need_value(i, a));
+else if (a == "--deg-floor-mm") opt.deg_floor_mm = std::stod(need_value(i, a));
             else if (a == "--baseline-deg") opt.baseline_deg = std::stod(need_value(i, a));
             else if (a == "--iqr-k") opt.iqr_k = std::stod(need_value(i, a));
             else if (a == "--pits") opt.pits = true;

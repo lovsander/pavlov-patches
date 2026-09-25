@@ -41,7 +41,13 @@ type ModelOptions struct {
 	OverlapTrain   float64
 	OverlapUse     float64
 	DegElbowTol    float64
-	CoordMode      string
+	// DegFloorMM — абсолютный пол RMSE (мм): «идеально точно» -> дальше степень
+	// не наращиваем. 0 (по умолчанию) = выключен: поведение как у Python-референса.
+	// Включение МЕНЯЕТ контракт (степени на гладких окнах перестают зависеть от
+	// разрядности решателя) и требует той же правки в Python + перегенерации
+	// spec/conformance (см. docs/embedded.md §11).
+	DegFloorMM float64
+	CoordMode  string
 }
 
 // DefaultModelOptions — раскладка пайплайна из CONTEXT §25 (N=7, фаза 24.75°).
@@ -179,22 +185,93 @@ func (m *Model) estimateDegree(angles, radii []float64, center,
 		rmse float64
 	}
 	var results []degRMSE
-	for deg := m.Opt.DegMin; deg <= m.Opt.DegMax; deg += 2 {
-		coefs, err := Polyfit(xs, ys, deg)
-		if err != nil {
-			continue
+
+	if m.Opt.CoordMode == "raw" {
+		// Легаси-режим без нормировки: базис Чебышёва требует x ∈ [-1, 1],
+		// поэтому здесь остаётся прежний путь (отдельный МНК на степень).
+		for deg := m.Opt.DegMin; deg <= m.Opt.DegMax; deg += 2 {
+			coefs, err := Polyfit(xs, ys, deg)
+			if err != nil {
+				continue
+			}
+			sse := 0.0
+			for i := 0; i < n; i++ {
+				e := Polyval(coefs, xs[i]) - ys[i]
+				sse += e * e
+			}
+			r := math.Sqrt(sse / float64(n))
+			results = append(results, degRMSE{deg, r})
+			if r < bestRMSE {
+				bestRMSE, bestDeg = r, deg
+			}
 		}
-		sse := 0.0
+	} else {
+		// ОДНО накопление Грама в базисе Чебышёва даёт сразу все степени:
+		// нормальная матрица степени d — ведущая подматрица матрицы DegMax.
+		// Данные центрируем (y - yref): иначе SSE = Q - cᵗb теряет разряды.
+		// Замерено на эталонных данных: 2.5x быстрее на фазе обучения при тех же
+		// числах (docs/embedded.md §11-13).
+		yref := 0.0
+		for _, v := range ys {
+			yref += v
+		}
+		yref /= float64(n)
+
+		dmax := m.Opt.DegMax
+		p := dmax + 1
+		gram := make([]float64, p*p) // верхний треугольник, симметризация ниже
+		rhs := make([]float64, p)
+		T := make([]float64, p)
 		for i := 0; i < n; i++ {
-			e := Polyval(coefs, xs[i]) - ys[i]
-			sse += e * e
+			ChebRow(xs[i], dmax, T)
+			yc := ys[i] - yref
+			for a := 0; a < p; a++ {
+				rhs[a] += T[a] * yc
+				for c := a; c < p; c++ {
+					gram[a*p+c] += T[a] * T[c]
+				}
+			}
 		}
-		r := math.Sqrt(sse / float64(n))
-		results = append(results, degRMSE{deg, r})
-		if r < bestRMSE {
-			bestRMSE, bestDeg = r, deg
+		for a := 0; a < p; a++ {
+			for c := a + 1; c < p; c++ {
+				gram[c*p+a] = gram[a*p+c]
+			}
+		}
+
+		for deg := m.Opt.DegMin; deg <= dmax; deg += 2 {
+			nn := deg + 1
+			A := make([][]float64, nn)
+			b := make([]float64, nn)
+			for r := 0; r < nn; r++ {
+				A[r] = make([]float64, nn)
+				for c := 0; c < nn; c++ {
+					A[r][c] = gram[r*p+c]
+				}
+				b[r] = rhs[r]
+			}
+			coefs, err := LstsqQR(A, b)
+			if err != nil {
+				continue
+			}
+			// RMSE — по ЯВНЫМ остаткам (Кленшоу), как и по точкам окна раньше.
+			sse := 0.0
+			for i := 0; i < n; i++ {
+				e := ChebSum(coefs, deg, xs[i]) - (ys[i] - yref)
+				sse += e * e
+			}
+			r := math.Sqrt(sse / float64(n))
+			results = append(results, degRMSE{deg, r})
+			if r < bestRMSE {
+				bestRMSE, bestDeg = r, deg
+			}
+			// Абсолютный пол (если включён): дальше степень не наращиваем, иначе
+			// на гладких окнах её выбирает разрядность решателя, а не данные.
+			if m.Opt.DegFloorMM > 0 && r <= m.Opt.DegFloorMM {
+				break
+			}
 		}
 	}
+
 	limit := bestRMSE * (1 + m.Opt.DegElbowTol)
 	for _, res := range results { // строки идут по возрастанию степени
 		if res.rmse <= limit {

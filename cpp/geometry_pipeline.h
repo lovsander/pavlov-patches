@@ -30,6 +30,9 @@ struct PipelineOptions {
     double overlap_train = 15.0;
     double overlap_use = 5.0;
     double deg_elbow_tol = 0.05;
+    // Абсолютный пол RMSE, мм (0 = выключен): «идеально точно» -> степень не
+    // растёт. Меняет контракт (см. patch_approximator.h / docs/embedded.md §11).
+    double deg_floor_mm = 0.0;
     double amplitude_scale = 180.0;
 
     // чистильщик (авто-iqr — штатный режим пайплайна)

@@ -61,6 +61,7 @@ std::vector<SectionModel> GeometryPipeline::process(
                                 opt_.amplitude_scale, opt_.overlap_train,
                                 opt_.overlap_use, opt_.phase_deg,
                                 opt_.deg_elbow_tol, "normalized");
+        model.set_deg_floor_mm(opt_.deg_floor_mm);
 
         // Фичер ям: центры берём из детектора (band) по ОЧИЩЕННЫМ точкам —
         // ровно как section_crack_zones в Python (layout.py).

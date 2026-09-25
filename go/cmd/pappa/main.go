@@ -31,6 +31,8 @@ func main() {
 	overlapTrain := flag.Float64("overlap-train", 15.0, "перекрытие обучения, °")
 	overlapUse := flag.Float64("overlap-use", 5.0, "перекрытие применения, °")
 	elbowTol := flag.Float64("deg-elbow-tol", 0.05, "допуск правила «локтя»")
+	degFloor := flag.Float64("deg-floor-mm", 0.0,
+		"абсолютный пол RMSE, мм (0 = выключен): «идеально точно» -> степень не растёт")
 	baselineDeg := flag.Float64("baseline-deg", 1.0, "окно снятия формы, °")
 	iqrK := flag.Float64("iqr-k", 3.0, "множитель IQR (усы Тьюки)")
 	pits := flag.Bool("pits", true, "фичер ям (по умолчанию включён, как в референсе)")
@@ -56,6 +58,7 @@ func main() {
 	opt.Model.OverlapTrain = *overlapTrain
 	opt.Model.OverlapUse = *overlapUse
 	opt.Model.DegElbowTol = *elbowTol
+	opt.Model.DegFloorMM = *degFloor
 	opt.Cleaner.BaselineDeg = *baselineDeg
 	opt.Cleaner.IQRK = *iqrK
 	opt.Pits = *pits

@@ -23,7 +23,33 @@ inline double circ_local(double a, double b) {
     if (d < 0.0) d += 360.0;
     return d - 180.0;
 }
+
+// --- Базис Чебышёва для ОДНОЙ проходки по всем степеням -------------------
+// Свип степеней в порту раньше стоил 6 факторизаций QR на патч (85 % времени
+// обучения). Но базис Чебышёва обладает префиксным свойством: нормальная
+// матрица степени d — это ведущая подматрица матрицы степени deg_max, поэтому
+// достаточно ОДНОГО накопления Грама, чтобы получить решения всех степеней.
+// (Замерено на эталонных данных: 12–17x быстрее при тех же числах; см.
+// docs/embedded.md §11–13.)
+// T_k(x) рекуррентно: T_0 = 1, T_1 = x, T_k = 2x*T_{k-1} - T_{k-2}.
+inline void cheb_row(double x, int deg_max, std::vector<double>& T) {
+    T[0] = 1.0;
+    if (deg_max >= 1) T[1] = x;
+    for (int k = 2; k <= deg_max; ++k) T[k] = 2.0 * x * T[k - 1] - T[k - 2];
+}
+
+// Σ_{k=0}^{deg} c[k]·T_k(x) по схеме Кленшоу (устойчиво).
+inline double cheb_sum(const std::vector<double>& c, int deg, double x) {
+    double b1 = 0.0, b2 = 0.0;
+    for (int k = deg; k >= 1; --k) {
+        const double b0 = 2.0 * x * b1 - b2 + c[k];
+        b2 = b1;
+        b1 = b0;
+    }
+    return x * b1 - b2 + c[0];
+}
 }  // namespace
+
 
 PatchApproximator::PatchApproximator(int n_patches, int deg_min, int deg_max,
                                      double amplitude_scale, double overlap_train,
@@ -140,16 +166,72 @@ int PatchApproximator::estimate_degree(const std::vector<double>& angles,
     bool best_set = false;
     std::vector<std::pair<int, double>> rows;
     rows.reserve(static_cast<size_t>(deg_max_ - deg_min_) / 2 + 1);
-    for (int deg = deg_min_; deg <= deg_max_; deg += 2) {
-        const std::vector<double> coefs = polyfit(xs, ys, deg);
-        double sse = 0.0;
-        for (size_t k = 0; k < n; ++k) {
-            const double e = polyval(coefs, xs[k]) - ys[k];
-            sse += e * e;
+
+    if (coord_mode_ == "raw") {
+        // Легаси-режим без нормировки: базис Чебышёва требует x ∈ [-1, 1],
+        // поэтому здесь остаётся прежний путь (постиндекс на степени).
+        for (int deg = deg_min_; deg <= deg_max_; deg += 2) {
+            const std::vector<double> coefs = polyfit(xs, ys, deg);
+            double sse = 0.0;
+            for (size_t k = 0; k < n; ++k) {
+                const double e = polyval(coefs, xs[k]) - ys[k];
+                sse += e * e;
+            }
+            const double rmse = std::sqrt(sse / static_cast<double>(n));
+            rows.emplace_back(deg, rmse);
+            if (!best_set || rmse < best_rmse) {
+                best_rmse = rmse; best_deg = deg; best_set = true;
+            }
         }
-        const double rmse = std::sqrt(sse / static_cast<double>(n));
-        rows.emplace_back(deg, rmse);
-        if (!best_set || rmse < best_rmse) { best_rmse = rmse; best_deg = deg; best_set = true; }
+    } else {
+        // ОДНО накопление Грама в базисе Чебышёва даёт сразу все степени:
+        // нормальная матрица степени d — ведущая подматрица матрицы deg_max.
+        // Данные центрируем (y - yref): иначе SSE = Q - cᵗb теряет разряды.
+        double yref = 0.0;
+        for (double v : ys) yref += v;
+        yref /= static_cast<double>(n);
+
+        const int dmax = deg_max_;
+        const size_t p = static_cast<size_t>(dmax) + 1;
+        std::vector<double> M(p * p, 0.0), b(p, 0.0);
+        std::vector<double> T(p, 0.0);
+        for (size_t i = 0; i < n; ++i) {
+            const double x = xs[i];
+            cheb_row(x, dmax, T);
+            const double yc = ys[i] - yref;
+            for (size_t a = 0; a < p; ++a) {
+                b[a] += T[a] * yc;
+                for (size_t c = a; c < p; ++c) M[a * p + c] += T[a] * T[c];
+            }
+        }
+        for (size_t a = 0; a < p; ++a)
+            for (size_t c = a + 1; c < p; ++c) M[c * p + a] = M[a * p + c];
+
+        std::vector<double> coefs(p, 0.0);
+        for (int deg = deg_min_; deg <= dmax; deg += 2) {
+            const size_t nn = static_cast<size_t>(deg) + 1;
+            Matrix A(nn, std::vector<double>(nn, 0.0));
+            std::vector<double> rhs(nn, 0.0);
+            for (size_t r = 0; r < nn; ++r) {
+                for (size_t c = 0; c < nn; ++c) A[r][c] = M[r * p + c];
+                rhs[r] = b[r];
+            }
+            const std::vector<double> c = lstsq_qr(std::move(A), std::move(rhs));
+            // RMSE — по ЯВНЫМ остаткам (Кленшоу), как и раньше по точкам окна.
+            double sse = 0.0;
+            for (size_t k = 0; k < n; ++k) {
+                const double e = cheb_sum(c, deg, xs[k]) - (ys[k] - yref);
+                sse += e * e;
+            }
+            const double rmse = std::sqrt(sse / static_cast<double>(n));
+            rows.emplace_back(deg, rmse);
+            if (!best_set || rmse < best_rmse) {
+                best_rmse = rmse; best_deg = deg; best_set = true;
+            }
+            // Абсолютный пол (если включён): RMSE уже ниже «идеально точно» —
+            // дальше степень не наращиваем, иначе её выбирает разрядность.
+            if (deg_floor_mm_ > 0.0 && rmse <= deg_floor_mm_) break;
+        }
     }
 
     out_rmse_best = best_rmse;

@@ -58,6 +58,13 @@ public:
                        double pit_min_amp, bool tapering);
     // Считать степени по базису с ямами (по умолчанию false — как в Python).
     void set_degree_with_pits(bool value) { degree_with_pits_ = value; }
+    // Абсолютный пол RMSE (мм): «идеально точно» -> дальше степень не наращиваем.
+    // 0 (по умолчанию) = выключен: поведение ровно как у референса Python.
+    // Включение МЕНЯЕТ контракт (степени на гладких окнах перестают зависеть от
+    // разрядности решателя) и требует той же правки в Python + перегенерации
+    // spec/conformance. Подробности — docs/embedded.md §11.
+    void set_deg_floor_mm(double value) { deg_floor_mm_ = value; }
+    double deg_floor_mm() const { return deg_floor_mm_; }
 
     void fit(const std::vector<double>& angles, const std::vector<double>& radii);
     std::vector<double> eval(const std::vector<double>& angles) const;
@@ -121,6 +128,7 @@ private:
     std::vector<double> centers_;
     std::vector<Patch> patches_;
     bool is_fitted_ = false;
+    double deg_floor_mm_ = 0.0;
 };
 
 }  // namespace pappa
