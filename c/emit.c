@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "pappa.h"
 
@@ -26,6 +27,8 @@ typedef struct {
 
 static pp_section g_sec[MAX_SECTIONS];
 static int g_nsec = 0;
+static pp_model g_models[MAX_SECTIONS];    // вне стека: pp_model крупная
+static pp_meta g_meta[MAX_SECTIONS];
 
 // Разбор CSV по заголовку: нужны section_id, height_mm, angle_deg, radius_mm.
 static int load_csv(const char *path) {
@@ -107,13 +110,15 @@ static void sort_section(pp_section *s) {
 
 
 int main(int argc, char **argv) {
-    const char *input = NULL, *out = NULL;
+    const char *input = NULL, *out = NULL, *out_dir = NULL, *name = "sample";
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--input") && i + 1 < argc) input = argv[++i];
         else if (!strcmp(argv[i], "--out") && i + 1 < argc) out = argv[++i];
+        else if (!strcmp(argv[i], "--out-dir") && i + 1 < argc) out_dir = argv[++i];
+        else if (!strcmp(argv[i], "--name") && i + 1 < argc) name = argv[++i];
     }
     if (!input) {
-        printf("PAPPA (C): нужен --input FILE.csv [--out FILE.txt]\n");
+        printf("PAPPA (C): --input FILE.csv [--out-dir DIR --name NAME] [--out FILE.txt]\n");
         return 2;
     }
     if (load_csv(input) < 0) {
@@ -132,6 +137,7 @@ int main(int argc, char **argv) {
     static double ca[PP_MAX_POINTS], cr[PP_MAX_POINTS], pits[PP_MAX_PITS];
     static pp_model model;
     static pp_detector_cfg det;
+    int any_pits = 0;
 
     for (int si = 0; si < g_nsec; ++si) {
         pp_section *s = &g_sec[si];
@@ -156,7 +162,18 @@ int main(int argc, char **argv) {
             pp_model_set_pit_shape(&model, 3.0, 2.0, 3.2, 3e-3, 1);
             pp_model_set_pits(&model, pits, npits);
         }
+        const clock_t t0 = clock();
         pp_model_fit(&model, ca, cr, cn);
+        const double fit_ms = (double)(clock() - t0) * 1000.0 / (double)CLOCKS_PER_SEC;
+        g_models[si] = model;
+        g_meta[si].section_id = s->id;
+        g_meta[si].height_mm = s->height;
+        g_meta[si].source = "csv";
+        g_meta[si].description = "сечение из CSV";
+        g_meta[si].n_points_total = s->n;
+        g_meta[si].n_outliers = n_out;
+        g_meta[si].fit_time_ms = fit_ms;
+        if (npits > 0) any_pits = 1;
 
         fprintf(fo, "SECTION id=%d height=%.17g n_points=%d n_used=%d n_outliers=%d "
                     "n_pits=%d", s->id, s->height, s->n, cn, n_out, npits);
@@ -183,6 +200,14 @@ int main(int argc, char **argv) {
         }
     }
     if (fo != stdout) fclose(fo);
+    if (out_dir) {
+        if (pp_save_sample(out_dir, name, g_models, g_meta, g_nsec, 1.0, 3.0,
+                           any_pits, input, "PAPPA C port") != 0) {
+            printf("не записать образец: %s\n", out_dir);
+            return 1;
+        }
+        printf("образец записан: %s\n", out_dir);
+    }
     printf("сечений: %d\n", g_nsec);
     return 0;
 }

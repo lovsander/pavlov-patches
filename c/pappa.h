@@ -123,4 +123,21 @@ int pp_patch_n_pit(const pp_model *m, int i);
 double pp_patch_pit_off(const pp_model *m, int i, int j);
 double pp_patch_pit_amp(const pp_model *m, int i, int j);
 
+// ------------------------------------------------- запись папки образца (C)
+// Формат — как у Python/C++/Go (см. c/document.c).
+typedef struct {
+    int section_id;
+    double height_mm;
+    const char *source;
+    const char *description;
+    int n_points_total;
+    int n_outliers;
+    double fit_time_ms;
+} pp_meta;
+
+int pp_save_sample(const char *out_dir, const char *name, const pp_model *models,
+                   const pp_meta *meta, int nsec, double cleaner_baseline_deg,
+                   double cleaner_iqr_k, int pits, const char *input_csv,
+                   const char *description);
+
 #endif  // PAPPA_C_H

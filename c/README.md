@@ -21,6 +21,41 @@
 конформанс-векторы проверяют степени, коэффициенты, термины фичера и контур; метрики
 добавим вместе с писателем документа (следующий шаг).
 
+## Пайплайн: CSV → папка образца (как у C++/Go)
+
+```bash
+powershell -File c/build_gcc.ps1                 # -> c/pappa_c.exe и c/pappa.dll
+c/pappa_c.exe --input python/synthetic_data.csv \
+              --out-dir samples/synthetic_sphere_c --name body \
+              [--out samples/_c_results.txt]     # плоский отчёт с числами
+
+python python/studies/verify_port.py \
+       --py-dir samples/synthetic_sphere --cpp-dir samples/synthetic_sphere_c
+```
+
+`pappa_c.exe` делает всё: читает CSV **по заголовку** (`section_id`, `height_mm`,
+`angle_deg`, `radius_mm`), сортирует по углу, чистит выбросы (iqr), ищет ямы
+(band), обучает модель, считает метрики и **пишет папку образца**
+(`sample.json` + `sections/NN.pappa.json`) — формат тот же, что у Python/C++/Go
+(`c/document.c` повторяет `cpp/sample_writer.cpp` поле в поле).
+
+**Результат сверки** (`verify_port`, 10 сечений × 6000 точек):
+
+| | |
+|---|---|
+| степени по патчам | совпали на всех 10 сечениях |
+| `max\|Δr\|` против Python | **1.341e-12 мм** при допуске 1e-6 |
+| RMSE к эталону | совпали (0.0124…0.0162 мм) |
+| время | 0.57 с на 10 сечений |
+
+Отдельно есть сверка «числа против кода референса» —
+`python/studies/check_c_pipeline.py`: выбросы **118/118, 120/120, …**, центры ям
+**3/3, 4/4, …**, степени по всем патчам совпали.
+
+Ёмкости массивов для хоста поднимаются при сборке
+(`-DPP_MAX_POINTS=8192`, `-DPP_MAX_WINDOW=4096`): сечение 6000 точек требует окна
+обучения ~1357 точек, иначе окно обрезается и числа уезжают.
+
 ## Проверка (векторы конформанса)
 
 ```bash

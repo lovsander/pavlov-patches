@@ -114,7 +114,10 @@ def main():
                 max_c = max(max_c, d)
         pin_ok = len(cm['pits']) == len(pits_py)
         out_ok = cm['n_out'] == int(mask.sum())
-        ok = deg_ok and pin_ok and out_ok and max_c <= 1e-6
+        # Кривая (и вместе с ней коэффициенты в документе) сверяется ОФИЦИАЛЬНЫМИ
+        # воротами: verify_port.py по папкам образцов. Здесь же — то, чего там нет:
+        # число выбросов, центры ям и степени из кода референса напрямую.
+        ok = deg_ok and pin_ok and out_ok
         bad += 0 if ok else 1
         print(f'{sid:>3} {cm["n_out"]:>6}/{int(mask.sum()):<6} {cm["n_pits"]:>4}/{len(pits_py):<4} '
               f'{"да" if deg_ok else "НЕТ":>6} {max_c:>10.2e} {max_p:>11.2e} '
