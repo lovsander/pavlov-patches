@@ -11,7 +11,7 @@
 #
 # A port whose toolchain is absent is reported as SKIP with the reason and does NOT fail
 # the run: the repository is meant to be readable on a machine that has only a few of the
-# twelve toolchains installed.
+# thirteen toolchains installed.
 #
 # ENCODING NOTE: this file is UTF-8 without BOM, like every other .ps1 here. Windows
 # PowerShell 5.1 reads such a file in the ANSI code page, so the EXECUTABLE text below is
@@ -253,6 +253,16 @@ $ports = @(
         Pipeline = (New-Step '.' @('csharp/bin/Release/net10.0/pappa.exe', 'pipeline', '--input', 'python/synthetic_data.csv', '--out-dir', 'samples/synthetic_sphere_csharp', '--name', 'synthetic_sphere', '--quiet'))
         Sample = 'synthetic_sphere_csharp'
         Note = 'one exe, three subcommands: conformance | selftest | pipeline'
+    }
+    @{
+        Name = 'octave'; Title = 'GNU Octave (core only: own JSON, CSV, statistics)'
+        Tool = @('octave-cli', 'octave', (Join-Path $env:LOCALAPPDATA 'Programs\GNU Octave'), (Join-Path $env:ProgramFiles 'GNU Octave'))
+        Build = $null
+        Vectors = (New-PsStep 'octave/build_octave.ps1' @('-Vectors'))
+        Tests = (New-PsStep 'octave/build_octave.ps1' @('-Test'))
+        Pipeline = (New-PsStep 'octave/build_octave.ps1' @('-Pipeline'))
+        Sample = 'synthetic_sphere_octave'
+        Note = 'bin/*.m scripts; the self-test covers vectors + smoke fit + document round-trip'
     }
 
 )

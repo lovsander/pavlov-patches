@@ -18,8 +18,8 @@ Approximation):
   python spec/check_schema.py samples/synthetic_sphere_r          # одна папка/порт
   ```
   Коды: `0` — всё сошлось, `1` — нарушения, `2` — нечего проверять.
-  Проверено на всех папках образцов всех портов (18 папок × 10 сечений + манифесты
-  = 198 файлов).
+  Проверено на всех папках образцов всех портов (19 папок × 10 сечений + манифесты
+  = 209 файлов).
 - `conformance/` — golden vectors (`input -> expected output`) used to verify
   every language port against the reference implementation;
   see `conformance/README.md` for the vector format and tolerances.
