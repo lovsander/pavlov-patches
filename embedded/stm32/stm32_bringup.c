@@ -7,16 +7,16 @@
 extern uint32_t _stack_top;
 extern uint32_t _data_load, _data_start, _data_end, _bss_start, _bss_end;
 
-void reset_handler(void);
+void Reset_Handler(void);
 
 __attribute__((section(".vectors"), used))
 const uint32_t g_vectors[64] = {
     (uint32_t)&_stack_top,          // 0: начальный SP
-    (uint32_t)reset_handler,        // 4: Reset
+    (uint32_t)Reset_Handler,        // 4: Reset
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
-void reset_handler(void) {
+void Reset_Handler(void) {
     uint32_t *src = &_data_load, *dst = &_data_start;
     while (dst < &_data_end) *dst++ = *src++;
     for (dst = &_bss_start; dst < &_bss_end; ) *dst++ = 0;

@@ -7,10 +7,12 @@
     { "type": "wokwi-logic-analyzer", "id": "logic", "top": 220, "left": 0, "attrs": {} }
   ],
   "connections": [
-    [ "$serialMonitor:RX", "pill:A9", "", [] ],
-    [ "$serialMonitor:TX", "pill:A10", "", [] ],
+    [ "pill:A9", "$serialMonitor:RX", "", [] ],
+    [ "pill:A10", "$serialMonitor:TX", "", [] ],
     [ "logic:D0", "pill:A9", "blue", [] ],
     [ "logic:D1", "pill:C13", "green", [] ]
-  ]
+  ],
+  "serialMonitor": { "display": "terminal" }
 }
+
 

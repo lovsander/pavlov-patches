@@ -9,12 +9,12 @@ MEMORY
 
 _stack_top = ORIGIN(RAM) + LENGTH(RAM);
 
-ENTRY(reset_handler)
+ENTRY(Reset_Handler)
 
 SECTIONS
 {
     .text : {
-        KEEP(*(.vectors))
+        KEEP(*(.isr_vector))
         *(.text*)
         *(.rodata*)
     } > FLASH

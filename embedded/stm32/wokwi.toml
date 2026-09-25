@@ -1,4 +1,4 @@
 [wokwi]
 version = 1
-firmware = 'build/stm32_bringup.elf'
+firmware = 'build/stm32_bringup.bin'
 elf = 'build/stm32_bringup.elf'
