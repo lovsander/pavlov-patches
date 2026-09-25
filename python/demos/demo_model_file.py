@@ -1,5 +1,5 @@
 """
-demo_pmodel.py
+demo_model_file.py
 
 Полный цикл: fit → save → load → validate → summary → сравнение eval.
 """
@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from appa.core.patch_approximator import PatchApproximator
-from appa.io.pmodel import load_model, save_model, summary, validate_model
+from appa.io.model_file import load_model, save_model, summary, validate_model
 
 # ============ Загрузка и очистка ============
 data = pd.read_csv('synthetic_data.csv')
@@ -57,7 +57,7 @@ print(f"Степени патчей: {approx.get_degrees()}")
 # ============ Сохранение ============
 save_model(
     approx,
-    'section_0.pmodel.json',
+    'section_0.appa.json',
     meta={
         'section_id': 0,
         'height_mm': 0.0,
@@ -65,20 +65,20 @@ save_model(
         'description': 'Сечение 0, сфера R=15',
     },
 )
-print("Сохранено: section_0.pmodel.json")
+print("Сохранено: section_0.appa.json")
 
 # ============ Валидация ============
-ok, errors = validate_model('section_0.pmodel.json')
+ok, errors = validate_model('section_0.appa.json')
 print(f"\nВалидация: {'OK' if ok else 'ОШИБКИ'}")
 for e in errors:
     print(f"  - {e}")
 
 # ============ Summary ============
 print()
-summary('section_0.pmodel.json')
+summary('section_0.appa.json')
 
 # ============ Загрузка и проверка ============
-loaded = load_model('section_0.pmodel.json')
+loaded = load_model('section_0.appa.json')
 fitted2 = loaded.eval(angles_grid)
 
 max_diff = float(np.max(np.abs(fitted - fitted2)))

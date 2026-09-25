@@ -178,7 +178,7 @@ def main():
           f"C {np.median(seam_c):.4f}/{max(seam_c):.4f} мм")
     print(f"Рисунок: {cfg['out_crops']}")
     print("Фичер — прототип: ядро (patch_approximator.py, C++) и форматы "
-          "(.npz/.pmodel) не менялись.")
+          "(.npz/.appa.json) не менялись.")
 
 if __name__ == "__main__":
     main()

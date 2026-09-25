@@ -12,7 +12,7 @@ appa — Adaptive Poly-Patch Approximation (кодовая база «Pavlov pat
     pit_feature         фичер ям: оконный гаусс + ЕДИНАЯ сборка модели
                         (MODEL_DEFAULTS, PIT_DEFAULTS, build_model)
     geometry            узлы/центры патчей, круговые операции
-  appa.io         ввод/вывод: pmodel (save/load/validate), dataset (CSV, очистка)
+  appa.io         ввод/вывод: model_file (документ .appa.json: save/load/validate), dataset (CSV, очистка)
   appa.analysis   метрики и исследования: zones (детектор трещин), layout (раскладка
                   звездой), per_section_phase, phase_study, defect_study,
                   cleaner_study, pit_study, model_scan
@@ -32,13 +32,14 @@ from .core.outlier_cleaner import AutoOutlierCleaner, OutlierCleaner, build_clea
 from .core.patch_approximator import COORD_MODE, PatchApproximator
 from .core.pit_feature import (MODEL_DEFAULTS, PIT_DEFAULTS, build_model,
                                validate_pit_cfg)
-from .paths import PY_ROOT, REPO_ROOT, resolve_path, resolve_plot
+from .paths import (PY_ROOT, REPO_ROOT, SAMPLES_DIR, resolve_path,
+                    resolve_plot)
 
 __all__ = [
     "PatchApproximator", "OutlierCleaner", "AutoOutlierCleaner", "build_cleaner",
-    "CrackDetector", "PY_ROOT", "REPO_ROOT", "resolve_path", "resolve_plot",
-    "COORD_MODE", "build_model", "MODEL_DEFAULTS", "PIT_DEFAULTS",
-    "validate_pit_cfg",
+    "CrackDetector", "PY_ROOT", "REPO_ROOT", "SAMPLES_DIR", "resolve_path",
+    "resolve_plot", "COORD_MODE", "build_model", "MODEL_DEFAULTS",
+    "PIT_DEFAULTS", "validate_pit_cfg",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

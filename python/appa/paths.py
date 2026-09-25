@@ -4,7 +4,7 @@ appa.paths — общие пути проекта.
 Зачем: раньше каждый скрипт имел свою копию resolve_path() и считал файлы
 относительно СВОЕЙ папки. После разбиения на пакет у скриптов разные уровни
 вложенности, поэтому корень `python/` (где лежат synthetic_data.csv и
-*.pmodel.json) определяется здесь один раз.
+*.appa.json) определяется здесь один раз.
 
 Рисунки пишутся не в корень, а в python/plots/ (resolve_plot) — см. CONTEXT §21.
 """
@@ -14,6 +14,8 @@ from pathlib import Path
 PY_ROOT = Path(__file__).resolve().parents[1]        # каталог python/
 REPO_ROOT = PY_ROOT.parent                           # корень репозитория
 PLOTS_DIR = PY_ROOT / "plots"                        # все .png проекта
+# описания геометрических тел образцов: samples/<имя>/ (манифест + sections/)
+SAMPLES_DIR = REPO_ROOT / "samples"
 
 
 def resolve_path(name):

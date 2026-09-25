@@ -1,12 +1,11 @@
 {
-  "format": "pmodel",
-  "version": "1.0",
+  "format": "appa",
+  "version": "2.0",
   "method": "PatchApproximator",
-  "created": "2026-09-25T11:46:43Z",
+  "created": "2026-09-25T11:55:28Z",
   "software": {
     "language": "python",
-    "version": "3.11",
-    "patch_approximator_version": "0.1.0"
+    "appa_version": "0.3.0"
   },
   "meta": {
     "section_id": 0,
@@ -273,7 +272,7 @@
   "statistics": {
     "n_points_total": 5999,
     "n_outliers_removed": 1,
-    "fit_time_ms": 37.756700068712234,
+    "fit_time_ms": 32.86330006085336,
     "rmse_global_mm": 0.044836907954299024
   }
 }

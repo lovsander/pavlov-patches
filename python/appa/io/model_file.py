@@ -1,7 +1,13 @@
 """
-pmodel.py
+appa/io/model_file.py
 
-Сериализация PatchApproximator в формат .pmodel.json (v1.0).
+Сериализация модели (PatchApproximator / PitPatchApproximator) в документ
+описания сечения — формат .appa.json (v2.0).
+
+ПОЧЕМУ ПЕРЕИМЕНОВАНО из pmodel (2026-09-24, CONTEXT §27): слово pmodel не
+коррелировало с именем метода (APPA / пакет appa). Старые документы
+(format="pmodel", version="1.0") ЧИТАЮТСЯ прежним кодом через слой
+совместимости в load_model/validate_model.
 """
 
 import json
@@ -9,17 +15,27 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-FORMAT_NAME = "pmodel"
-FORMAT_VERSION = "1.0"
+FORMAT_NAME = "appa"
+FORMAT_VERSION = "2.0"
+
+# формат-предшественник (до переименования): читаем, но не пишем
+LEGACY_FORMAT_NAME = "pmodel"
+LEGACY_VERSIONS = ("1.0",)
+
+
+def _appa_version():
+    """Версия пакета appa — в документе видно, чем он записан (без цикла импортов)."""
+    from .. import __version__
+    return str(__version__)
 
 
 # ============ SAVE ============
 
 def save_model(approx, filepath, meta=None):
     """
-    Сохранить обученный PatchApproximator в .pmodel.json.
+    Сохранить обученную модель в документ .appa.json.
 
-    approx : PatchApproximator (уже fitted)
+    approx : PatchApproximator / PitPatchApproximator (уже fitted)
     filepath : путь к файлу
     meta : опциональный dict с section_id, height_mm, source, description
     """
@@ -31,12 +47,11 @@ def save_model(approx, filepath, meta=None):
     data = {
         "format": FORMAT_NAME,
         "version": FORMAT_VERSION,
-        "method": "PatchApproximator",
+        "method": type(approx).__name__,
         "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "software": {
             "language": "python",
-            "version": "3.11",
-            "patch_approximator_version": "0.1.0",
+            "appa_version": _appa_version(),
         },
         "meta": {
             "section_id": meta.get("section_id", 0),
@@ -90,8 +105,8 @@ def save_model(approx, filepath, meta=None):
 
 def load_model(filepath):
     """
-    Загрузить модель из .pmodel.json.
-    Возвращает PatchApproximator (fitted), готовый к eval().
+    Загрузить модель из документа .appa.json (или старого .pmodel.json v1.0).
+    Возвращает модель (fitted), готовую к eval().
     """
     from ..core.patch_approximator import PatchApproximator
 
@@ -99,11 +114,19 @@ def load_model(filepath):
     with filepath.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # Проверка формата
-    if data.get("format") != FORMAT_NAME:
-        raise ValueError(f"Не .pmodel файл: format={data.get('format')}")
-    if data.get("version") != FORMAT_VERSION:
-        raise ValueError(f"Неподдерживаемая версия: {data.get('version')}")
+    # Проверка формата. Документ-предшественник (pmodel v1.0) читается: структура
+    # та же, отличается только имя формата и версия (и, как правило, coord_mode
+    # отсутствует -> коэффициенты в сырых градусах, см. ниже).
+    fmt = str(data.get("format", ""))
+    ver = str(data.get("version", ""))
+    if fmt == FORMAT_NAME:
+        if ver != FORMAT_VERSION:
+            raise ValueError(f"Неподдерживаемая версия: {ver!r}")
+    elif fmt == LEGACY_FORMAT_NAME and ver in LEGACY_VERSIONS:
+        data["format"] = FORMAT_NAME
+        data["version"] = FORMAT_VERSION
+    else:
+        raise ValueError(f"Не документ APPA: format={fmt!r}, version={ver!r}")
 
     g = data["global"]
 
@@ -173,8 +196,10 @@ def validate_model(filepath):
         if key not in data:
             errors.append(f"Missing field: {key}")
 
-    if data.get("format") != FORMAT_NAME:
-        errors.append(f"Wrong format: {data.get('format')}")
+    if str(data.get("format", "")) != FORMAT_NAME and not (
+            str(data.get("format", "")) == LEGACY_FORMAT_NAME
+            and str(data.get("version", "")) in LEGACY_VERSIONS):
+        errors.append(f"Wrong format: {data.get('format')} v{data.get('version')}")
 
     if "global" in data:
         g = data["global"]
