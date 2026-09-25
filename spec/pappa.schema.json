@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lovsander/pavlov-patches/spec/pappa.schema.json",
+  "title": "PAPPA section document (pappa v2.0)",
+  "description": "Документ описания ОДНОГО сечения: раскладка патчей, коэффициенты, члены фичера ям. Пишется любым портом, читается любым языком. Контракт: docs/method.md §10, структурный источник — python/pappa/io/model_file.py. Документы предшественников (pmodel v1.0, appa v2.0) читаются слоем совместимости референса, но НЕ описываются этой схемой.",
+  "type": "object",
+  "required": ["format", "version", "method", "created", "software", "meta", "global", "patches"],
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "pappa", "description": "имя формата" },
+    "version": { "const": "2.0", "description": "версия формата документа" },
+    "method": {
+      "type": "string",
+      "description": "имя класса модели: PatchApproximator (чистая полиномиальная) или PitPatchApproximator (с фичером ям)",
+      "examples": ["PitPatchApproximator"]
+    },
+    "created": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "время записи, UTC, формат ISO-8601 без долей секунды"
+    },
+    "software": {
+      "type": "object",
+      "description": "чем записан документ (диагностика расхождений между портами)",
+      "required": ["language", "pappa_version"],
+      "additionalProperties": false,
+      "properties": {
+        "language": { "type": "string", "examples": ["python", "c", "cpp", "go", "js", "java", "kotlin", "rust", "pascal", "swift", "julia", "r"] },
+        "pappa_version": { "type": "string", "description": "версия порта, а не формата" }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "description": "паспорт сечения",
+      "required": ["section_id", "height_mm"],
+      "additionalProperties": false,
+      "properties": {
+        "section_id": { "type": "integer", "description": "номер сечения (задаётся данными, не порядком файла)" },
+        "height_mm": { "type": "number", "description": "высота сечения вдоль оси тела, мм" },
+        "source": { "type": "string", "description": "откуда взято сечение (обычно имя CSV)" },
+        "description": { "type": "string" }
+      }
+    },
+    "global": {
+      "type": "object",
+      "description": "раскладка патчей и политика метода — общая часть для всех сечений этого документа",
+      "required": ["units", "n_patches", "half_sector_deg", "half_train_deg", "half_use_deg", "deg_min", "deg_max"],
+      "additionalProperties": false,
+      "properties": {
+        "units": {
+          "type": "object",
+          "required": ["angle", "length"],
+          "additionalProperties": false,
+          "properties": {
+            "angle": { "const": "degree" },
+            "length": { "const": "mm" }
+          }
+        },
+        "n_patches": { "type": "integer", "minimum": 1, "description": "число патчей N" },
+        "half_sector_deg": { "type": "number", "exclusiveMinimum": 0, "description": "180/N" },
+        "phase_deg": { "type": "number", "description": "поворот сетки патчей; 0 — историческое поведение" },
+        "half_train_deg": { "type": "number", "exclusiveMinimum": 0, "description": "полуокно ОБУЧЕНИЯ" },
+        "half_use_deg": { "type": "number", "exclusiveMinimum": 0, "description": "полуокно ПРИМЕНЕНИЯ (сшивки)" },
+        "overlap_train_deg": { "type": "number", "description": "half_train_deg - half_sector_deg" },
+        "overlap_use_deg": { "type": "number", "description": "half_use_deg - half_sector_deg" },
+        "deg_min": { "type": "integer", "description": "минимальная ЧЁТНАЯ степень" },
+        "deg_max": { "type": "integer", "description": "максимальная ЧЁТНАЯ степень" },
+        "coord_mode": {
+          "enum": ["normalized", "raw"],
+          "description": "канон координат коэффициентов: normalized = x/half_train ∈ [-1,1]; raw = градусы (только чтение старых файлов)"
+        },
+        "deg_elbow_tol": { "type": "number", "minimum": 0, "description": "допуск правила RMSE-«локтя», доли" },
+        "amplitude_scale": { "type": "number", "description": "историческая метрика совместимости; на выбор степени НЕ влияет" },
+        "pit": {
+          "type": "object",
+          "description": "фичер ям (опционально; отсутствие блока = чистая полиномиальная модель)",
+          "required": ["sigma_deg", "core_sigma", "window_sigma", "tapering", "centers_deg"],
+          "additionalProperties": false,
+          "properties": {
+            "sigma_deg": { "type": "number", "exclusiveMinimum": 0, "description": "полуширина ядра гаусса" },
+            "core_sigma": { "type": "number", "exclusiveMinimum": 0, "description": "внутри core_sigma·sigma вес 1" },
+            "window_sigma": { "type": "number", "exclusiveMinimum": 0, "description": "на window_sigma·sigma вес 0; должно быть ≥ core_sigma" },
+            "pit_min_amp": { "type": "number", "description": "член выкидывается, если не виден в окне патча сильнее этого, мм" },
+            "tapering": { "type": "boolean", "description": "false = чистый гаусс (только для сравнений)" },
+            "centers_deg": {
+              "type": "array",
+              "description": "центры ям по кольцу, ° (общие для всего тела)",
+              "items": { "type": "number", "minimum": 0, "exclusiveMaximum": 360 }
+            }
+          }
+        }
+      }
+    },
+    "patches": {
+      "type": "array",
+      "minItems": 1,
+      "description": "патчи в порядке раскладки (i-й патч = i-й центр); длина = global.n_patches",
+      "items": {
+        "type": "object",
+        "required": ["center_deg", "degree", "coefs"],
+        "additionalProperties": false,
+        "properties": {
+          "center_deg": { "type": "number", "description": "центр патча (i·sector + half_sector + phase) mod 360" },
+          "degree": { "type": "integer", "minimum": 0, "description": "чётная степень полинома" },
+          "n_points": { "type": "integer", "minimum": 0, "description": "точек в обучающем окне" },
+          "coefs": {
+            "type": "array",
+            "minItems": 1,
+            "description": "коэффициенты ПО УБЫВАНИЮ степени: coefs[0] при x^degree, последний — свободный член; x — нормированная локальная координата",
+            "items": { "type": "number" }
+          },
+          "metrics": {
+            "type": "object",
+            "description": "как выбрана степень (набор ключей может расти)",
+            "additionalProperties": true,
+            "properties": {
+              "amplitude_mm": { "type": "number" },
+              "mean_radius_mm": { "type": "number" },
+              "amplitude_norm": { "type": "number", "description": "(P95-P5)/mean по сектору — справочная метрика" },
+              "deg_elbow_tol": { "type": "number" },
+              "rmse_selected_mm": { "type": "number", "description": "RMSE выбранной степени на обучающем окне" },
+              "rmse_best_mm": { "type": "number", "description": "лучший RMSE среди рассмотренных степеней" },
+              "n_train_points": { "type": "number", "description": "точек в обучающем окне (пишется как число, не int)" }
+            }
+          },
+          "stats": {
+            "type": "object",
+            "description": "точность патча на своём окне (набор ключей может расти)",
+            "additionalProperties": true,
+            "properties": {
+              "rmse_mm": { "type": "number" },
+              "max_err_mm": { "type": "number" },
+              "mae_mm": { "type": "number" },
+              "correlation": { "type": "number" }
+            }
+          },
+          "pit_terms": {
+            "type": "array",
+            "description": "члены фичера ям ЭТОГО патча (может быть пустым массивом)",
+            "items": {
+              "type": "object",
+              "required": ["dx_deg", "amp"],
+              "additionalProperties": false,
+              "properties": {
+                "dx_deg": { "type": "number", "description": "угловое смещение центра ямы от центра патча, °" },
+                "amp": { "type": "number", "description": "амплитуда гаусса, мм" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "statistics": {
+      "type": "object",
+      "description": "сводка по сечению; набор ключей может расти (свободные метаданные)",
+      "required": ["n_points_total"],
+      "additionalProperties": true,
+      "properties": {
+        "n_points_total": { "type": "integer", "description": "точек в сечении после очистки" },
+        "n_outliers_removed": { "type": "integer", "description": "отброшено очисткой (пишут не все порты)" },
+        "fit_time_ms": { "type": "number" },
+        "rmse_global_mm": { "type": "number", "description": "RMSE модели против идеального профиля (если он есть в данных)" }
+      }
+    }
+  }
+}
+
