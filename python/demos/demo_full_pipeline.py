@@ -26,6 +26,7 @@ matplotlib.use('Agg')
 from appa.core.outlier_cleaner import OutlierCleaner
 from appa.core.patch_approximator import PatchApproximator
 from appa.core.crack_detector import CrackDetector
+from appa.paths import resolve_plot
 
 # ============ ЗАГРУЗКА ============
 data = pd.read_csv('synthetic_data.csv')
@@ -176,8 +177,9 @@ for j in range(n_results, len(axes)):
     axes[j].axis('off')
 
 plt.tight_layout()
-plt.savefig('pipeline_all_sections.png', dpi=120, bbox_inches='tight')
-print("\nГрафик: pipeline_all_sections.png")
+out_all = resolve_plot('pipeline_all_sections.png')
+plt.savefig(out_all, dpi=120, bbox_inches='tight')
+print(f"\nГрафик: {out_all}")
 
 # ============ ГРАФИК ТРЕЩИН ПО ВЫСОТЕ ============
 fig2, (ax_depth, ax_width, ax_angle) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
@@ -246,5 +248,6 @@ else:
                 ha='center', va='center', transform=ax.transAxes)
 
 plt.tight_layout()
-plt.savefig('pipeline_cracks_by_height.png', dpi=110)
-print("График: pipeline_cracks_by_height.png")
+out_cracks = resolve_plot('pipeline_cracks_by_height.png')
+plt.savefig(out_cracks, dpi=110)
+print(f"График: {out_cracks}")

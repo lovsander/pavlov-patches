@@ -98,7 +98,7 @@ from appa.core.geometry import node_angles, patch_centers
 from appa.core.outlier_cleaner import build_cleaner
 from appa.core.patch_approximator import PatchApproximator
 from appa.io.dataset import attach_ideal_grid, load_sections
-from appa.paths import resolve_path
+from appa.paths import resolve_path, resolve_plot
 from appa.report.layout_report import report_chosen, report_overlay, report_rows
 from appa.viz.layout_figs import (overlay_curves, plot_layout_fits,
                                   plot_layout_report, plot_patches,
@@ -286,9 +286,9 @@ def main():
     print("=" * 100)
     curves = overlay_curves(cfg, sections, grid, rows)
     report_overlay(curves, cfg)
-    plot_layout_fits(cfg, sections, grid, union, curves, resolve_path(cfg["out_fits"]))
+    plot_layout_fits(cfg, sections, grid, union, curves, resolve_plot(cfg["out_fits"]))
     issue = plot_patches(cfg, sections, grid, union, chosen, ap, curves,
-                         resolve_path(cfg["out_patches"]))
+                         resolve_plot(cfg["out_patches"]))
     print(f"\nПроблемное место (последняя панель {cfg['out_patches']}): "
           f"сечение {issue['section']}, N = {issue['n_patches']}, узел "
           f"{issue['node_deg']:.1f}°, отступ {issue['node_margin']:+.2f}°, "
@@ -297,9 +297,9 @@ def main():
         f"N={n}: {p:.4f} мм" for n, p in sorted(issue["peaks_mm"].items())))
 
     # --- рисунки ---
-    plot_variants(cfg, rows, union, resolve_path(cfg["out_variants"]))
+    plot_variants(cfg, rows, union, resolve_plot(cfg["out_variants"]))
     plot_layout_report(cfg, sections, table, union, rows, chosen, flex_info,
-                resolve_path(cfg["out_report"]))
+                resolve_plot(cfg["out_report"]))
     print(f"\nРисунок: {cfg['out_variants']} "
           f"(звёзды N = {', '.join(str(n) for n in cfg['star_n_patches'])})")
     print(f"Рисунок: {cfg['out_report']}")

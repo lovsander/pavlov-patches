@@ -21,6 +21,7 @@ matplotlib.use('Agg')
 
 from appa.core.outlier_cleaner import OutlierCleaner
 from appa.core.patch_approximator import PatchApproximator
+from appa.paths import resolve_plot
 
 # ============ ЗАГРУЗКА ============
 data = pd.read_csv('synthetic_data.csv')
@@ -169,8 +170,9 @@ ax2.grid(True, alpha=0.3)
 ax2.set_xlim(0, 360)
 
 plt.tight_layout()
-plt.savefig('demo_full_pipeline.png', dpi=120)
-print(f"\nГрафик: demo_full_pipeline.png")
+out_png = resolve_plot('demo_full_pipeline.png')
+plt.savefig(out_png, dpi=120)
+print(f"\nГрафик: {out_png}")
 
 # ============ ПРОГОН ПО ВСЕМ СЕЧЕНИЯМ ============
 print("\n=== ПРОГОН ПО ВСЕМ СЕЧЕНИЯМ ===")

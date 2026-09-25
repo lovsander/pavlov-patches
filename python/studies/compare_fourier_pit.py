@@ -33,7 +33,7 @@ from appa.analysis.pit_study import fit_variant
 from appa.analysis.pit_study import measure as measure_patches
 from appa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
 from appa.io.dataset import attach_ideal_grid, load_sections
-from appa.paths import resolve_path
+from appa.paths import resolve_path, resolve_plot
 from appa.report.fourier_report import (report_config, report_sweep,
                                         report_table, report_verdict)
 from appa.viz.fourier_figs import plot_fourier_pit, plot_fourier_sweep
@@ -126,7 +126,7 @@ def main():
     crops = crop_data(cfg, sections, zones_by_section, models_by_section,
                       cfg["sections"], win + cfg["crop_margin_deg"])
     plot_fourier_pit(cfg, sections, zones_by_section, crops, rows,
-                     resolve_path(cfg["out_figure"]))
+                     resolve_plot(cfg["out_figure"]))
 
     ref = {v: (float(np.mean([rows[s]["metrics"][v]["rmse"]
                               for s in cfg["sections"]])),
@@ -138,7 +138,7 @@ def main():
     sweep = sweep_orders(cfg, sections, pits_by_section, cfg["orders_sweep"],
                          grid)
     report_sweep(cfg, sweep, ref)
-    plot_fourier_sweep(cfg, sweep, ref, resolve_path(cfg["out_sweep"]))
+    plot_fourier_sweep(cfg, sweep, ref, resolve_plot(cfg["out_sweep"]))
 
     report_verdict(cfg, rows)
     print(f"\nРисунки: {cfg['out_figure']}, {cfg['out_sweep']}")

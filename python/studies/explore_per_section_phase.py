@@ -68,7 +68,7 @@ import matplotlib.pyplot as plt
 from appa.analysis.layout import fit_layout, layout_margins, section_crack_zones, union_zones, zone_margin_deg
 from appa.core.geometry import node_angles, patch_centers
 from appa.io.dataset import attach_ideal_grid, load_sections
-from appa.paths import resolve_path
+from appa.paths import resolve_path, resolve_plot
 from appa.analysis.per_section_phase import search_phase, section_margins, section_rmse, shared_rmse_fn
 from appa.report.phase_report import report_compare, report_pits, report_zones
 from appa.viz.phase_figs import plot_phase_fits
@@ -154,9 +154,9 @@ def main():
     # --- 3) рисунки ---
     n_main = cfg["n_patches_compare"][0]
     plot_phase_fits(cfg, sections, grid, zones_by_section, n_main, own_all[n_main],
-              shared_rows[n_main], resolve_path(cfg["out_fits"]))
+              shared_rows[n_main], resolve_plot(cfg["out_fits"]))
     plot_overview(cfg, sections, zones_by_section, own_all, shared_rows,
-                  cfg["n_patches_compare"][1], resolve_path(cfg["out_overview"]))
+                  cfg["n_patches_compare"][1], resolve_plot(cfg["out_overview"]))
 
     # --- 4) итог: готовый рецепт фаз по высоте ---
     n_use = n_main

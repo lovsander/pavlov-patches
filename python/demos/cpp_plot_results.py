@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 
+from appa.paths import resolve_plot
+
 # Автоматически определяем рабочую директорию скрипта
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -115,7 +117,7 @@ axes[-1, 0].set_xlabel('Угол, градусы', fontsize=10)
 axes[-1, 1].set_xlabel('Угол, градусы', fontsize=10)
 
 plt.tight_layout()
-output_plot_path = os.path.join(script_dir, 'cpp_pipeline_results_analysis.png')
+output_plot_path = resolve_plot('cpp_pipeline_results_analysis.png')
 plt.savefig(output_plot_path, dpi=300, bbox_inches='tight')
 
 print(f"\n[Успешно] График анализа геометрии построен и сохранен:\n👉")

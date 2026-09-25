@@ -57,7 +57,7 @@ from appa.core.outlier_cleaner import build_cleaner
 from appa.core.patch_approximator import PatchApproximator
 from appa.analysis.model_scan import build_variant_config, evaluate_variant
 from appa.io.dataset import load_and_clean
-from appa.paths import resolve_path
+from appa.paths import resolve_path, resolve_plot
 
 CONFIG = {
     # --- данные ---
@@ -306,7 +306,7 @@ def main():
         fontsize=12, y=0.995)
 
     plt.tight_layout(rect=(0, 0, 1, 0.93))
-    out = resolve_path(cfg["output"])
+    out = resolve_plot(cfg["output"])
     plt.savefig(out, dpi=cfg["dpi"], bbox_inches="tight")
     print(f"\nГрафик сохранён: {out}")
 
@@ -358,7 +358,7 @@ def main():
             + "\nкривые — по сетке отрисовки, точки — измерения из файла",
             fontsize=12, y=0.995)
         plt.tight_layout(rect=(0, 0, 1, 0.90))
-        out2 = resolve_path(cfg["output_residuals"])
+        out2 = resolve_plot(cfg["output_residuals"])
         plt.savefig(out2, dpi=cfg["dpi"], bbox_inches="tight")
         print(f"График невязок сохранён: {out2}")
 

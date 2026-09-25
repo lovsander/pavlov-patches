@@ -54,7 +54,7 @@ from appa.core.outlier_cleaner import build_cleaner, median_filter_wrap, window_
 
 from appa.analysis.zones import defect_maps, detect_zones, indicator_curve, load_crack_table, mask_to_zones, score_zones, truth_zone_mask
 from appa.analysis.defect_study import candidate_results, sweep_thresholds, truth_zones_by_section, window_metrics
-from appa.paths import resolve_path
+from appa.paths import resolve_path, resolve_plot
 from appa.report.defect_report import report_candidates
 from appa.viz.defect_figs import plot_candidates, plot_indicators, plot_k_sweep, plot_tradeoff, plot_windows
 
@@ -185,8 +185,8 @@ def main():
     print("Читается так: чем больше окно, тем меньше шума, но тем сильнее фильтр\n"
           "«срезает» дно трещины (дно уходит вверх от эталона) и уводит форму.")
 
-    plot_windows(cfg, sections, resolve_path(cfg["out_windows"]))
-    plot_tradeoff(cfg, sections, table, rows, resolve_path(cfg["out_tradeoff"]))
+    plot_windows(cfg, sections, resolve_plot(cfg["out_windows"]))
+    plot_tradeoff(cfg, sections, table, rows, resolve_plot(cfg["out_tradeoff"]))
     print(f"\nРисунок: {cfg['out_windows']}")
     print(f"Рисунок: {cfg['out_tradeoff']}")
 
@@ -228,7 +228,7 @@ def main():
                   f"TP {sc['tp']}, FP {sc['fp']}, FN {sc['fn']}, "
                   f"P={sc['precision']:.2f} R={sc['recall']:.2f} F1={sc['f1']:.2f}")
 
-    plot_indicators(cfg, sections, table, data, resolve_path(cfg["out_indicators"]))
+    plot_indicators(cfg, sections, table, data, resolve_plot(cfg["out_indicators"]))
     print(f"\nРисунок: {cfg['out_indicators']}")
 
     print()
@@ -236,7 +236,7 @@ def main():
     print("3) Какой признак дефектности выбрать (кандидаты из конфига)")
     print("=" * 100)
     cand_res = candidate_results(cfg, sections, table)
-    plot_candidates(cfg, sections, cand_res, resolve_path(cfg["out_candidates"]))
+    plot_candidates(cfg, sections, cand_res, resolve_plot(cfg["out_candidates"]))
     print(f"Рисунок: {cfg['out_candidates']}")
 
     cand_all = candidate_results(cfg, sections, table, cfg["all_sections"])
@@ -248,7 +248,7 @@ def main():
     for lab in cand_res["labels"]:
         b = sweep[lab]["best"]
         print(f"{lab:<26} {b['k']:>7.1f} {b['f1']:>15.2f} {b['fp']:>11.2f}")
-    plot_k_sweep(cfg, sweep, resolve_path(cfg["out_k_sweep"]))
+    plot_k_sweep(cfg, sweep, resolve_plot(cfg["out_k_sweep"]))
     print(f"\nРисунок: {cfg['out_k_sweep']}")
 
     print("\nВывод исследования: точечные производные d1/d2 на шаге 0.06° упираются\n"

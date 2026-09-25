@@ -77,7 +77,7 @@ from appa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
 
 from appa.analysis.layout import section_crack_zones
 from appa.io.dataset import attach_ideal_grid, load_sections, ring_interp
-from appa.paths import resolve_path
+from appa.paths import resolve_path, resolve_plot
 from appa.analysis.pit_study import fit_variant, measure, pit_crop_info
 from appa.report.pit_report import report_config, report_crops, report_metrics
 from appa.viz.pit_figs import VARIANTS, plot_pit_crops
@@ -153,7 +153,7 @@ def main():
 
     # --- рисунок: только кропы участков ям ---
     plot_pit_crops(cfg, sections, zones_by_section, crops, nodes_by_section,
-                   resolve_path(cfg["out_crops"]))
+                   resolve_plot(cfg["out_crops"]))
 
     # --- итог ---
     mean = {v: float(np.mean([rows[s][v]["rmse"] for s in cfg["sections"]]))

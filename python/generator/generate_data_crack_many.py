@@ -23,6 +23,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 
+from appa.paths import resolve_plot
+
 # ============ ПАРАМЕТРЫ ============
 N_POINTS_PER_SECTION = 6000   # точек на одно сечение (на оборот)
 N_SECTIONS = 10               # число сечений по высоте
@@ -215,5 +217,6 @@ for ax, sid in zip(axes, SECTIONS_TO_SHOW):
     ax.set_xlim(0, 360)
 
 plt.tight_layout()
-plt.savefig('generator_check.png', dpi=110)
-print("\nГрафик: generator_check.png")
+out_png = resolve_plot('generator_check.png')
+plt.savefig(out_png, dpi=110)
+print(f"\nГрафик: {out_png}")

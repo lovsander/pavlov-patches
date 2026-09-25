@@ -39,7 +39,7 @@ from appa.analysis.pit_window_study import (best_phase_for_pits, geometry_rows,
 from appa.core.geometry import node_angles
 from appa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
 from appa.io.dataset import attach_ideal_grid, load_sections, ring_interp
-from appa.paths import resolve_path
+from appa.paths import resolve_path, resolve_plot
 from appa.report.pit_window_report import report_fits, report_geometry
 from appa.viz.pit_window_figs import plot_window_fits, plot_window_geometry
 
@@ -142,7 +142,7 @@ def main():
     sid_worst = max(cfg["sections"],
                     key=lambda s: per_section[s]["shared"][3.2]["sum_overlap"])
     plot_window_geometry(cfg, rows, per_section, sections, zones_all, pits_all,
-                         sid_worst, resolve_path(cfg["out_geometry"]))
+                         sid_worst, resolve_plot(cfg["out_geometry"]))
 
     # --- 2) ПОДГОНКИ для 4 сечений и 5 вариантов ---
     rows_fits, crops_by_section, models_by_section = {}, {}, {}
@@ -197,7 +197,7 @@ def main():
     report_fits(cfg, rows_fits, VARIANTS,
                 {k: v["label"] for k, v in VARIANTS.items()})
     plot_window_fits(cfg, sections, zones_all, crops_by_section, rows_fits,
-                     VARIANTS, resolve_path(cfg["out_fits"]))
+                     VARIANTS, resolve_plot(cfg["out_fits"]))
     print(f"\nРисунки: {cfg['out_geometry']}, {cfg['out_fits']}")
 
 if __name__ == "__main__":

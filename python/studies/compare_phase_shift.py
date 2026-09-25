@@ -48,7 +48,7 @@ import matplotlib.pyplot as plt
 
 from appa.analysis.model_scan import make_approximator
 from appa.io.dataset import load_and_clean
-from appa.paths import resolve_path
+from appa.paths import resolve_path, resolve_plot
 from appa.analysis.phase_study import aligned_phase, cyclic_dist, find_pits, outlier_mask, sweep_phase
 
 CONFIG = {
@@ -286,7 +286,7 @@ def main():
         f"(подписан угол ямы); период свипа = sector = 360/N",
         fontsize=11, y=0.995)
     fig.tight_layout(rect=(0, 0, 1, 0.93))
-    out1 = resolve_path(cfg["output_rmse"])
+    out1 = resolve_plot(cfg["output_rmse"])
     fig.savefig(out1, dpi=cfg["dpi"], bbox_inches="tight")
     print(f"\nГрафик RMSE(фаза) сохранён: {out1}")
 
@@ -353,7 +353,7 @@ def main():
         f"описана трещина",
         fontsize=11, y=0.995)
     fig2.tight_layout(rect=(0, 0, 1, 0.94))
-    out2 = resolve_path(cfg["output_curves"])
+    out2 = resolve_plot(cfg["output_curves"])
     fig2.savefig(out2, dpi=cfg["dpi"], bbox_inches="tight")
     print(f"График невязок сохранён: {out2}")
 

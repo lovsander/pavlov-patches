@@ -60,7 +60,7 @@ from appa.core.outlier_cleaner import AutoOutlierCleaner, build_cleaner
 
 from appa.core.patch_approximator import PatchApproximator
 from appa.analysis.cleaner_study import evaluate_method, fmt, hampel_window_sweep, make_ctx, mean_or_none
-from appa.paths import resolve_path
+from appa.paths import resolve_path, resolve_plot
 from appa.report.cleaner_report import print_section_report, print_summary
 from appa.viz.cleaner_figs import plot_cleaner_report
 
@@ -229,7 +229,7 @@ def main():
               f"{fmt(mean_or_none([all_results[sid]['manual']['f1'] for sid in all_results]))}")
         print(f"  \"cleaner\": {{\"mode\": \"auto\", \"auto\": {best_cfg!r}}}")
 
-    out_png = resolve_path(cfg["out_png"])
+    out_png = resolve_plot(cfg["out_png"])
     plot_cleaner_report(cfg, sections, zoom_ctx, zoom_results, all_results, window_rows,
                 out_png)
     print(f"\nГрафик: {out_png}")
