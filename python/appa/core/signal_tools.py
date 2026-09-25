@@ -45,50 +45,54 @@ def window_points(angles, span_deg):
     return max(3, w)
 
 
+def _ring_windows(x, window):
+    """
+    Скользящие окна по КОЛЬЦУ + локальная медиана.
+
+    Возвращает (win, med): win — матрица окон (n, w) или None, если окно
+    построить нельзя (n < 3 или w < 3) — тогда med одна на весь профиль.
+    Единственное место, где строятся окна кольца: и медиана, и MAD считаются
+    по этим же окнам (раньше была вторая копия фильтра — см. CONTEXT §13).
+    """
+    x = np.asarray(x, dtype=float)
+    n = len(x)
+    w = max(3, int(round(window)) | 1)
+    if w > n:
+        w = n if n % 2 == 1 else n - 1
+    if w < 3 or n < 3:
+        return None, np.full(n, float(np.median(x)))
+
+    h = w // 2
+    ext = np.concatenate([x[-h:], x, x[:h]])
+    win = np.lib.stride_tricks.sliding_window_view(ext, w)
+    return win, np.median(win, axis=1)
+
+
 def median_filter_wrap(x, window):
     """
     Скользящая медиана по КОЛЬЦУ (профиль 0..360 замкнут).
 
     window — нечётное число точек (для чётного берётся window + 1).
     """
-    x = np.asarray(x, dtype=float)
-    n = len(x)
-    w = max(3, int(round(window)) | 1)
-    if w > n:
-        w = n if n % 2 == 1 else n - 1
-    if w < 3 or n < 3:
-        return np.full(n, float(np.median(x)))
-
-    h = w // 2
-    ext = np.concatenate([x[-h:], x, x[:h]])
-    win = np.lib.stride_tricks.sliding_window_view(ext, w)
-    return np.median(win, axis=1)
+    return _ring_windows(x, window)[1]
 
 
-def _median_filter_mad_wrap(x, window):
+def rolling_mad_wrap(x, window, center):
     """
-    Скользящие медиана и MAD по кольцу (для фильтра Хампеля).
+    Скользящий MAD по кольцу вокруг готовой локальной медианы (фильтр Хампеля).
 
-    Возвращает (med, mad) — оба длиной len(x).
+    center — результат median_filter_wrap(x, window) для тех же x и window
+    (окна считаются один раз в _ring_windows, MAD — один np.median по ним).
+    Если окно построить нельзя, возвращается общий MAD профиля.
     """
-    x = np.asarray(x, dtype=float)
-    n = len(x)
-    w = max(3, int(round(window)) | 1)
-    if w > n:
-        w = n if n % 2 == 1 else n - 1
-    if w < 3 or n < 3:
-        med = float(np.median(x))
-        return np.full(n, med), np.full(n, mad(x))
-
-    h = w // 2
-    ext = np.concatenate([x[-h:], x, x[:h]])
-    win = np.lib.stride_tricks.sliding_window_view(ext, w)
-    med = np.median(win, axis=1)
-    loc_mad = np.median(np.abs(win - med[:, None]), axis=1)
-    return med, loc_mad
+    win, _ = _ring_windows(x, window)
+    if win is None:
+        return np.full(len(np.asarray(x, dtype=float)), mad(x))
+    center = np.asarray(center, dtype=float)
+    return np.median(np.abs(win - center[:, None]), axis=1)
 
 
-def _two_component_gmm(x, max_iter=200, tol=1e-9):
+def _two_component_gmm(x, max_iter=50, tol=1e-6):
     """
     Двухкомпонентная одномерная гауссова смесь (EM).
 
@@ -97,7 +101,9 @@ def _two_component_gmm(x, max_iter=200, tol=1e-9):
     Возвращает апостериорную вероятность компоненты 1 для каждой точки.
 
     Известный простой метод, никаких порогов в мм: разделение происходит по
-    данным, а решение принимается по вероятности (>= 0.5).
+    данным, а решение принимается по вероятности (>= 0.5). Лимиты (50 итераций,
+    tol 1e-6) намеренно скромные: на профилях сечений EM сходится за <20
+    итераций, а лишние нули в допуске только маскируют отсутствие сходимости.
     """
     x = np.asarray(x, dtype=float)
     n = len(x)

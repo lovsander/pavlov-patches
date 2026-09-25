@@ -1,7 +1,7 @@
 # вырезано из outlier_cleaner_src.py (рефакторинг, см. CONTEXT.md §21)
 
 import numpy as np
-from .signal_tools import _median_filter_mad_wrap, _two_component_gmm, angular_step, iqr, median_filter_wrap, robust_sigma, window_points
+from .signal_tools import _two_component_gmm, angular_step, iqr, median_filter_wrap, rolling_mad_wrap, robust_sigma, window_points
 
 class OutlierCleaner:
     def __init__(self,
@@ -148,8 +148,8 @@ class AutoOutlierCleaner:
 
     def __init__(self, method="iqr", baseline_deg=1.0, hampel_window=7,
                  hampel_scale="local", z_threshold=3.5, iqr_k=3.0, k_sigma=3.0,
-                 n_reclip=2, deriv_gate=False, deriv_k=4.0, gmm_max_iter=200,
-                 gmm_tol=1e-9, max_removed_frac=0.5, min_points=20):
+                 n_reclip=2, deriv_gate=False, deriv_k=4.0, gmm_max_iter=50,
+                 gmm_tol=1e-6, max_removed_frac=0.5, min_points=20):
         """
         Параметры:
             method          — "iqr" (по умолчанию) | "mad" | "gmm" | "hampel".
@@ -174,6 +174,11 @@ class AutoOutlierCleaner:
                               поэтому шлюз добавляет ещё одну ложную точку на каждый
                               настоящий выброс (замер: precision падает с ~0.98 до ~0.35)
             deriv_k         — множитель sigma(dr) для шлюза производной
+            gmm_max_iter    — лимит итераций EM (метод "gmm"): 50 вместо 200,
+                              на профилях сечений EM сходится за <20 итераций
+            gmm_tol         — допуск сходимости EM (метод "gmm"), в единицах суммы
+                              изменений параметров: 1e-6 вместо 1e-9, чтобы остановка
+                              была осмысленной, а не «по лимиту итераций»
             max_removed_frac — предохранитель: максимум отбрасываемой доли точек
             min_points      — при меньшем числе точек выбросы не ищутся
         """
@@ -242,8 +247,9 @@ class AutoOutlierCleaner:
             med = median_filter_wrap(radii, w)
             sig_glob = robust_sigma(radii - med)
             if self.hampel_scale == "local":
-                # «учебный» Хампель: масштаб по MAD внутри окна
-                _, loc_mad = _median_filter_mad_wrap(radii, w)
+                # «учебный» Хампель: масштаб по MAD внутри окна (то же окно,
+                # что и у медианы — окна строятся один раз в signal_tools)
+                loc_mad = rolling_mad_wrap(radii, w, med)
                 sig_loc = 1.4826 * loc_mad
                 sig = np.where(sig_loc > 1e-12, sig_loc,
                                sig_glob if sig_glob > 1e-12 else 1.0)
