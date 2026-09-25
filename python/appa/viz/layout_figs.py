@@ -241,7 +241,9 @@ def plot_patches(cfg, sections, grid, union, chosen, ap, curves, out_path):
                    label=f"обучающие точки ({int(mask.sum())})")
 
         dxp = np.linspace(-p["half_train"], p["half_train"], 400)
-        ax.plot(dxp, np.polyval(p["coefs"], dxp), "-", color=color, lw=2.2,
+        # коэффициенты хранятся в каноне: x ∈ [-1,1] (coord_mode="normalized")
+        ax.plot(dxp, np.polyval(p["coefs"], dxp / p["half_train"]), "-",
+                color=color, lw=2.2,
                 label=f"полином deg={p['degree']}", zorder=4)
 
         for b in (-1.0, 1.0):

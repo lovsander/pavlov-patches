@@ -133,7 +133,8 @@ colors = plt.cm.tab10(np.linspace(0, 1, approx.n_patches))
 for j, p in enumerate(approx.patches_):
     a_local = np.linspace(-p['half_train'], p['half_train'], 300)
     a_global_raw = p['center'] + a_local
-    r_poly = np.polyval(p['coefs'], a_local)
+    # коэффициенты в каноне: x ∈ [-1,1] (coord_mode="normalized")
+    r_poly = np.polyval(p['coefs'], a_local / p['half_train'])
 
     mask_neg = a_global_raw < 0
     mask_over = a_global_raw > 360

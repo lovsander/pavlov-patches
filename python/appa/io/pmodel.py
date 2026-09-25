@@ -55,6 +55,8 @@ def save_model(approx, filepath, meta=None):
             "overlap_use_deg": float(approx.overlap_use),
             "deg_min": int(approx.deg_min),
             "deg_max": int(approx.deg_max),
+            # канон координат коэффициентов: "normalized" -> x / half_train ∈ [-1,1]
+            "coord_mode": str(getattr(approx, "coord_mode", "normalized")),
             # политика степени: RMSE-«локоть» на обучающем окне
             "deg_elbow_tol": float(getattr(approx, "deg_elbow_tol", 0.05)),
             # историческая амплитудная шкала, на выбор степени не влияет
@@ -115,6 +117,9 @@ def load_model(filepath):
         phase_deg=float(g.get("phase_deg", 0.0)),
         # старые файлы без поля допуска читаются как 0.05
         deg_elbow_tol=float(g.get("deg_elbow_tol", 0.05)),
+        # старые файлы писали коэффициенты в СЫРЫХ градусах (до канона [-1,1]);
+        # читаем так же, иначе модель считалась бы неверно
+        coord_mode=str(g.get("coord_mode", "raw")),
     )
 
     # Восстанавливаем состояние
@@ -176,6 +181,12 @@ def validate_model(filepath):
         for key in ("n_patches", "half_sector_deg", "deg_min", "deg_max"):
             if key not in g:
                 errors.append(f"global.{key} missing")
+
+        # канон координат: поле необязательное (старые файлы его не писали),
+        # но если есть — значение должно быть известным
+        mode = g.get("coord_mode")
+        if mode is not None and mode not in ("normalized", "raw"):
+            errors.append(f"global.coord_mode неизвестен: {mode!r}")
 
         if "patches" in data and "n_patches" in g:
             n = int(g["n_patches"])
@@ -274,6 +285,8 @@ def summary(filepath):
     print(f"deg_elbow_tol: {g.get('deg_elbow_tol', 0.05)} (политика: RMSE-«локоть»)")
     print(f"amplitude_scale: {g['amplitude_scale']} (legacy, степень не выбирает)")
     print(f"phase_deg: {g.get('phase_deg', 0.0)}")
+    print(f"coord_mode: {g.get('coord_mode', 'raw')} "
+          f"(канон: normalized = x/half_train ∈ [-1,1])")
 
     print("\nPatches:")
     print(f"{'#':>3} {'center':>8} {'deg':>4} {'n_pts':>6} "

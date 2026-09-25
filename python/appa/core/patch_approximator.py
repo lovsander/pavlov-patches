@@ -18,19 +18,31 @@ patch_approximator.py
 - smoothstep-веса с доминированием в своём секторе
 - фаза сетки (phase_deg): центры патчей повёрнуты на заданный угол;
   phase_deg=0 — историческое поведение (первый сектор начинается с 0°)
+- ЕДИНЫЙ КАНОН КООРДИНАТ (2026-09-24, CONTEXT §8.1, §27): локальная координата
+  патча нормируется на half_train -> x ∈ [-1,1] — и при обучении, и при расчёте,
+  и в сохранённых коэффициентах. Так один и тот же файл одинаково читают ВСЕ
+  реализации (C++ порт, pit_feature, будущие языки), и не портится
+  обусловленность матрицы МНК на степени 14. Файлы без поля coord_mode
+  читаются как "raw" (сырые градусы) — так писали старые версии.
 """
 
 import numpy as np
+
+# Канон координат: "normalized" (x / half_train ∈ [-1,1]) | "raw" (градусы).
+COORD_MODE = "normalized"
 
 
 class PatchApproximator:
     def __init__(self, n_patches=8, deg_min=4, deg_max=14, amplitude_scale=180.0,
                  overlap_train=15.0, overlap_use=5.0, phase_deg=0.0,
-                 deg_elbow_tol=0.05):
+                 deg_elbow_tol=0.05, coord_mode=COORD_MODE):
         if deg_min % 2 != 0:
             deg_min += 1
         if deg_max % 2 != 0:
             deg_max += 1
+        if coord_mode not in ("normalized", "raw"):
+            raise ValueError("coord_mode: ожидается 'normalized' или 'raw'")
+        self.coord_mode = coord_mode
         self.n_patches = n_patches
         self.deg_min = deg_min
         self.deg_max = deg_max
@@ -53,6 +65,18 @@ class PatchApproximator:
         """Векторизованный Smoothstep, ограниченный диапазоном [0, 1]."""
         t = np.clip(t, 0.0, 1.0)
         return t * t * (3.0 - 2.0 * t)
+
+    def _local(self, dx_deg, half_train):
+        """
+        Локальная координата патча в ЕДИНОМ каноне (CONTEXT §8.1, §27).
+
+        "normalized" -> x / half_train ∈ [-1,1] (канон, так читают все порты);
+        "raw" -> градусы, как писали старые версии (для чтения старых файлов).
+        """
+        dx_deg = np.asarray(dx_deg, dtype=float)
+        if self.coord_mode == "raw":
+            return dx_deg
+        return dx_deg / float(half_train)
 
 
     def _estimate_degree(self, angles, radii, center):
@@ -99,7 +123,7 @@ class PatchApproximator:
         angles_ext = np.concatenate([angles - 360, angles, angles + 360])
         radii_ext = np.concatenate([radii, radii, radii])
         mask = (angles_ext >= center - half_train) & (angles_ext <= center + half_train)
-        local_x = angles_ext[mask] - center
+        local_x = self._local(angles_ext[mask] - center, half_train)
         local_y = radii_ext[mask]
 
         if len(local_x) < 5:
@@ -159,7 +183,7 @@ class PatchApproximator:
             half_use = self.half_sector_ + self.overlap_use
 
             mask = (angles_ext >= c - half_train) & (angles_ext <= c + half_train)
-            local_x = angles_ext[mask] - c
+            local_x = self._local(angles_ext[mask] - c, half_train)
             local_y = radii_ext[mask]
 
             coefs = np.polyfit(local_x, local_y, deg)
@@ -240,8 +264,10 @@ class PatchApproximator:
                 # встроенный smoothstep
                 w[blend_mask] = t * t * (3.0 - 2.0 * t)
 
-            # Расчет значения полинома p['coefs'] сразу для всей сетки локальных координат
-            vals_matrix[:, idx] = np.polyval(p['coefs'], local_coord)
+            # Значение полинома по сетке локальных координат (в каноне):
+            # coefs записаны для x ∈ [-1,1] (coord_mode="normalized")
+            vals_matrix[:, idx] = np.polyval(
+                p['coefs'], self._local(local_coord, p['half_train']))
             weights_matrix[:, idx] = w
 
         # Векторизованное взвешенное среднее по строкам (ось 1)
@@ -282,6 +308,8 @@ class PatchApproximator:
             'overlap_train': self.overlap_train,
             'overlap_use': self.overlap_use,
             'phase_deg': self.phase_deg,
+            # канон координат коэффициентов: см. COORD_MODE / _local()
+            'coord_mode': self.coord_mode,
             'centers': np.array(self.centers_),
             'degrees': np.array(self.degrees_),
         }
@@ -306,6 +334,8 @@ class PatchApproximator:
             phase_deg=float(d['phase_deg']) if 'phase_deg' in d else 0.0,
             # старые .npz без поля допуска читаются как deg_elbow_tol = 0.05
             deg_elbow_tol=float(d['deg_elbow_tol']) if 'deg_elbow_tol' in d else 0.05,
+            # старые .npz писали коэффициенты в СЫРЫХ градусах (до канона [-1,1])
+            coord_mode=str(d['coord_mode']) if 'coord_mode' in d else "raw",
         )
         obj.centers_ = list(d['centers'])
         obj.half_sector_ = 360.0 / obj.n_patches / 2
