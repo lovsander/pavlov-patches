@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Go: жёстко LF. При core.autocrlf=true рабочая копия иначе получила бы CRLF,
+# и `gofmt -l` (он на это ругается) показывал бы все файлы как неотформатированные.
+*.go text eol=lf
