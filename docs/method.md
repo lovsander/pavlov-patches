@@ -307,7 +307,7 @@ CSV (section_id, height_mm, angle_deg, radius_mm [, radius_ideal_mm])
 | детектор, очистка | доля точек (`frac = 0.02`) — зона на самом пороге может дрогнуть на точку |
 | центры ям | `1e-6°` |
 
-**Ловушки при переносе на новый язык** (собраны по 11 портам; проверяйте их, а не
+**Ловушки при переносе на новый язык** (собраны по 12 портам; проверяйте их, а не
 «похожесть кода»):
 
 1. **Индексация.** Массивы в документе 0-базные; в языках с базой 1 ломается
@@ -315,6 +315,8 @@ CSV (section_id, height_mm, angle_deg, radius_mm [, radius_ideal_mm])
 2. **Округление половины.** `round` в Python 3 — «к чётному» (banker's), как в R
    и VBA; в C/C++/Pascal/Fortran/Octave — «от нуля»; в JS `Math.round` — «к +∞».
    Влияет на число точек окна (`window_points`) и на выбор степени — нужна эмуляция.
+   В C# спасает `Math.Round(x, MidpointRounding.ToEven)`: у `Math.Round(x)` без
+   второго аргумента половина уходит ОТ НУЛЯ (проверено на этом порту).
 3. **Знак остатка.** В Python `%` неотрицателен (floor-деление), в C/C#/JS — знак
    делимого. Кольцевые разности (`wrap180`, `d`) требуют floor-семантики.
 4. **Порядок коэффициентов** — по УБЫВАНИЮ степени (`coefs[0]` при `x^deg`,
@@ -337,6 +339,15 @@ CSV (section_id, height_mm, angle_deg, radius_mm [, radius_ideal_mm])
     документов — удобный первый тест); `null` (например `"detector": null`)
     должен пережить запись — в R `x[[k]] <- NULL` удаляет элемент, нужно
     `x[k] <- list(v)`.
+12. **Локаль машины.** Числа в документах и CSV обязаны быть с точкой: в JVM
+    помогает `Locale.setDefault(Locale.ROOT)`, в .NET —
+    `<InvariantGlobalization>true</InvariantGlobalization>` в `.csproj` плюс
+    `CultureInfo.InvariantCulture` в парсерах и форматтерах, иначе ru-RU даст
+    «8,73e-11» и запятую как разделитель дробной части.
+13. **Булевы значения в JSON.** `true`/`false` — только нижний регистр, а
+    `StringBuilder.Append(bool)` в C# печатает `True`/`False` (в JS
+    `String(true)` — правильно, в Pascal свой `BooleanToString`). Ошибку ловит
+    `python spec/check_schema.py`: значения сверяются со схемой.
 
 Приёмка порта: все векторы `spec/conformance` в допусках **и** совпадение папки
 образца с референсом численно (`verify_port.py`), плюс свои тесты/`selftest`.

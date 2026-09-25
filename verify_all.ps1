@@ -244,6 +244,17 @@ $ports = @(
         Pipeline = (New-PsStep 'r/build_r.ps1' @('-Pipeline'))
         Sample = 'synthetic_sphere_r'
     }
+    @{
+        Name = 'csharp'; Title = 'C# (.NET 10, zero NuGet packages; SelfTest = vectors + smoke + round-trip)'
+        Tool = @('dotnet', (Join-Path $env:ProgramFiles 'dotnet\dotnet.exe'))
+        Build = (New-PsStep 'csharp/build.ps1' @())
+        Vectors = (New-PsStep 'csharp/build.ps1' @('-Vectors'))
+        Tests = (New-PsStep 'csharp/build.ps1' @('-Test'))
+        Pipeline = (New-Step '.' @('csharp/bin/Release/net10.0/pappa.exe', 'pipeline', '--input', 'python/synthetic_data.csv', '--out-dir', 'samples/synthetic_sphere_csharp', '--name', 'synthetic_sphere', '--quiet'))
+        Sample = 'synthetic_sphere_csharp'
+        Note = 'one exe, three subcommands: conformance | selftest | pipeline'
+    }
+
 )
 
 # ============================== driver ==============================
