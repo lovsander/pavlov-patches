@@ -72,8 +72,8 @@ python studies/verify_port_figure.py --cpp-dir samples/<name>_cpp   # -> python/
 |------|---------|
 | `python/` | Reference implementation: package `pappa/` (`core`, `io`, `analysis`, `viz`, `report`); entry points in `studies/`, `demos/`, `generator/`; `research/` (rejected hypotheses and finished studies) and `deprecated/` (archive) |
 | `samples/` | Generated sample folders (`sample.json` + one `pappa.json` per section + `report/`) — not committed |
-| `cpp/`  | C++17 port (CMake) |
-| `go/`   | Go port |
+| `cpp/`  | C++17 port (CMake): full pipeline, checked numerically against the reference (`ctest`) |
+| `go/`   | Go port of the core, checked against the same conformance vectors (`go test ./...`) |
 | `docs/` | Method description & presentation assets |
 | `spec/` | Model document schema + conformance vectors |
 

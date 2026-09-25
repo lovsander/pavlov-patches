@@ -1,7 +1,55 @@
-# Go port
+# Go порт PAPPA
 
-Go implementation of **PAPPA — Piecewise Adaptive Poly-Patch Approximation**.
+Piecewise Adaptive Poly-Patch Approximation (PAPPA) на Go — порт **ядра метода**:
+патчи с адаптивной степенью и нормированной координатой, smoothstep-смешивание
+(partition of unity), фичер оконных гаусовых ям, детектор трещин (band) и
+авто-очистка выбросов (iqr). Числа обязаны совпадать с референсом на Python,
+поэтому повторены даже тонкости numpy (медиана как `np.median`, перцентиль с
+линейной интерполяцией, «банковское» округление в `window_points`).
 
-Status: **planned**. The port will be validated against the conformance
-vectors in [`../spec/conformance`](../spec/conformance) so it matches the
-reference implementation bit-for-bit (within tolerance).
+## Проверка (главное)
+
+Порт проверяется **теми же конформанс-векторами**, что и порт C++ — файлами
+`spec/conformance/vectors/*.json`, которые сгенерировал референс Python
+(`python/studies/make_conformance.py`). Это «золотые» пары «вход → ожидаемый
+выход» по трём ступеням: обучение модели, детектор ям, авто-очистка.
+
+```bash
+cd go
+go test ./...                                              # то же, но через тесты Go
+go run ./cmd/conformance ../spec/conformance/vectors        # подробный вывод + коды 0/1/2
+```
+
+Результат на текущих векторах: **4/4 пройдено** (степени и коэффициенты патчей
+совпадают с референсом в пределах допусков, контур — до 1e-6 мм).
+
+## Состав
+
+| Файл | Назначение |
+|------|-----------|
+| `pappa/model.go` | модель: нормированный базис `x/half_train ∈ [-1,1]`, фаза сетки, правило степени «локоть», фичер ям |
+| `pappa/linalg.go` | МНК через QR (Хаусхолдер) — как `np.polyfit`/`lstsq` |
+| `pappa/signal.go` | медиана/перцентили/окна/фильтры — как numpy |
+| `pappa/cleaner.go` | детектор трещин (band) и авто-очистка (iqr) |
+| `pappa/conformance.go` | чтение и проверка конформанс-векторов (stdlib `encoding/json`) |
+| `pappa/conformance_test.go` | `go test ./...` — тот же набор проверок |
+| `cmd/conformance/main.go` | CLI проверки порта |
+
+## Что ещё не сделано
+
+Пока это ядро + проверка по векторам. Чтобы порт стал полноценной заменой
+пайплайна (как `cpp/pappa_pipeline`), нужно дописать: чтение CSV с сечениями,
+запись папки образца (`sample.json` + `sections/NN.pappa.json`) и CLI
+`--input/--out-dir`; после этого он проверяется ещё и численно против референса
+на реальных сечениях (`python/studies/verify_port.py` + `ctest`).
+
+## Заметки по совместимости
+
+* `window_points` использует `math.RoundToEven`, а не `math.Round`: Python
+  `round(2.5) == 2`, а `math.Round(2.5) == 3`; на нечётких округлениях окна
+  разъехались бы с референсом.
+* Окна кольца строятся по модулю длины профиля (0° и 360° — одна точка), как в
+  Python.
+* МНК — QR, а не нормальные уравнения: numpy решает через SVD/QR, и на ямном
+  базисе нормальные уравнения дали бы заметно другие коэффициенты.
+
