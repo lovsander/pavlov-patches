@@ -79,5 +79,19 @@ python studies/verify_port_figure.py --cpp-dir samples/<name>_cpp   # -> python/
 
 ## License
 
-See [LICENSE](LICENSE).
+[MIT](LICENSE) **with an additional field-of-use restriction** (the additional
+condition takes precedence over the MIT permissions where they conflict):
+
+* the software, its derivative works, the **PAPPA method** implemented here and
+  any output produced by it (models, coefficients, approximated profiles) must
+  **not** be used in military systems manufactured outside the Russian
+  Federation — weapons, military and special equipment, and dual-use systems
+  employed for military purposes whose manufacturer is located outside the
+  Russian Federation;
+* use in military systems of Russian origin **is permitted**;
+* the restriction also covers granting third parties the right to do the above
+  (sublicensing, distribution, supplying such customers).
+
+Because of this restriction the project is **source-available, not OSI open
+source**. Everything else (rights, warranty disclaimer, liability) is plain MIT.
 

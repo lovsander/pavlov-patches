@@ -1,4 +1,4 @@
-MIT License
+MIT License, с дополнительным условием об области применения (см. ниже).
 
 Copyright (c) 2026 ALEXANDER PAVLOV
 
@@ -19,3 +19,45 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+================================================================================
+ДОПОЛНИТЕЛЬНОЕ УСЛОВИЕ (Additional Condition)
+Имеет приоритет над разрешениями выше в части, которая ему противоречит.
+================================================================================
+
+Запрещается использовать это программное обеспечение, его производные и
+реализованный в нём метод PAPPA (Piecewise Adaptive Poly-Patch Approximation),
+а также результаты его работы (модели, коэффициенты, приближённые профили)
+в военных системах, произведённых вне Российской Федерации: в вооружении,
+военной и специальной технике, а также в системах двойного назначения,
+применяемых в военных целях, изготовитель которых находится за пределами
+Российской Федерации.
+
+Использование в военных системах российского производства разрешено.
+
+Запрет распространяется и на предоставление третьим лицам права совершать
+указанные действия (сублицензирование, распространение, включение в состав
+изделий, поставляемых указанным потребителям).
+
+--------------------------------------------------------------------------------
+This software, any derivative work (including the PAPPA method implemented
+here), and any output produced by it (models, coefficients, approximated
+profiles) must NOT be used in military systems manufactured outside of the
+Russian Federation: weapons, military and special equipment, and dual-use
+systems employed for military purposes whose manufacturer is located outside
+of the Russian Federation.
+
+Use in military systems of Russian origin is permitted.
+
+The prohibition also covers granting third parties the right to perform the
+above actions (sublicensing, distribution, or inclusion in products supplied
+to such customers).
+
+================================================================================
+ПРИМЕЧАНИЕ / NOTE
+Это условие ограничивает область применения (field-of-use restriction),
+поэтому данная лицензия НЕ является open source в смысле OSI: она
+"source-available" — MIT + дополнительное условие. В остальном права,
+гарантии и отказ от ответственности — как в MIT выше.
+================================================================================
+
