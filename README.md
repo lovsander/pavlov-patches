@@ -74,7 +74,7 @@ python studies/verify_port_figure.py --cpp-dir samples/<name>_cpp   # -> python/
 | `samples/` | Generated sample folders (`sample.json` + one `pappa.json` per section + `report/`) — not committed |
 | `cpp/`  | C++17 port (CMake): full pipeline, checked numerically against the reference (`ctest`) |
 | `go/`   | Go port: full pipeline + core, checked by the conformance vectors and numerically against the reference (`go test ./...`) |
-| `docs/` | Method description & presentation assets |
+| `docs/` | Method description, presentation assets, embedded (MCU) feasibility study |
 | `spec/` | Model document schema + conformance vectors |
 
 ## License

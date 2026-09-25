@@ -4,6 +4,10 @@ Piecewise Adaptive Poly-Patch Approximation — порт на C++17. Пишет 
 формат документа**, что референс на Python, и проверяется численно
 (`python/studies/verify_port.py`, а также тестом CTest, см. ниже).
 
+Ядро порта (без I/O) зависит только от `<algorithm>`, `<cmath>`, `<vector>`,
+`<stdexcept>`, поэтому его можно собирать и под микроконтроллеры: измеренные
+стоимость, память и план оптимизаций — в `docs/embedded.md`.
+
 ## Сборка
 
 ```bash
