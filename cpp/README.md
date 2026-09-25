@@ -25,9 +25,22 @@ powershell -File cpp/build_gcc.ps1   # -> cpp/build/pappa_pipeline.exe
 ## Проверка паритета
 
 ```bash
-# одним тестом: собрать папку образца на Python, собрать её портом и сравнить
-ctest --preset msvc-release          # тест port_parity_python, см. cpp/parity_check.ps1
+# двумя тестами:
+#   1) conformance_vectors — проверка порта по spec/conformance/vectors (без Python)
+#   2) port_parity_python — сборка папки образца на Python, портом и сверка чисел
+ctest --preset msvc-release
 ```
+
+Векторы конформанса можно проверять и вручную (полезно при отладке — печатает,
+что именно разошлось):
+
+```bash
+cpp/build-cmake/msvc-release/Release/pappa_conformance spec/conformance/vectors
+# коды: 0 — всё сошлось, 1 — расхождения, 2 — нет каталога
+```
+
+Векторы генерирует референс: `python python/studies/make_conformance.py`
+(формат и допуски — в `spec/conformance/README.md`).
 
 Если CMake нашёл Python без numpy (типичный случай: системный интерпретатор),
 скрипт сам проверит наличие numpy и возьмёт окружение проекта; явно задать
@@ -84,7 +97,9 @@ cpp/build-cmake/msvc-release/Release/pappa_pipeline.exe \
 | `json_writer.{h,cpp}` | минимальный писатель JSON (17 значащих цифр, без зависимостей) |
 | `sample_writer.{h,cpp}` | запись `sample.json` + `sections/NN.pappa.json` |
 | `section_model.h` | описание сечения (данные + модель) |
-| `parity_check.ps1` | скрипт CTest-теста паритета с Python |
+| `parity_check.ps1` | скрипт CTest-теста паритета с Python (`port_parity_python`) |
+| `conformance.{h,cpp}*` | утилита `pappa_conformance`: проверка порта по spec/conformance/vectors |
+| `json_reader.{h,cpp}` | минимальный читатель JSON (для конформанс-векторов) |
 | `build_gcc.ps1` | сборка без CMake (g++, msys64) |
 
 **Не входят в сборку (история):** `outlier_cleaner.{h,cpp}` — ручной чистильщик

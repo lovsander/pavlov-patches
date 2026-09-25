@@ -21,14 +21,27 @@ add_executable(pappa_pipeline
     sample_writer.cpp
 )
 
+# --- утилита проверки порта по конформанс-векторам (без Python и без образцов) ---
+add_executable(pappa_conformance
+    conformance.cpp
+    json_reader.cpp
+    linalg.cpp
+    signal_tools.cpp
+    auto_outlier_cleaner.cpp
+    patch_approximator.cpp
+    pit_detector.cpp
+)
+
 # --- предупреждения компилятора (для обоих компиляторов, которые мы собираем:
 #     MSVC в VS Code/CMake и g++ из msys64) ---
 option(PAPPA_WARNINGS "Включить предупреждения компилятора" ON)
 if (PAPPA_WARNINGS)
     if (MSVC)
         target_compile_options(pappa_pipeline PRIVATE /W4 /permissive-)
+        target_compile_options(pappa_conformance PRIVATE /W4 /permissive-)
     else()
         target_compile_options(pappa_pipeline PRIVATE -Wall -Wextra)
+        target_compile_options(pappa_conformance PRIVATE -Wall -Wextra)
     endif()
 endif()
 
@@ -39,6 +52,11 @@ endif()
 option(PAPPA_ENABLE_PARITY_TEST "Зарегистрировать ctest-проверку паритета" ON)
 if (PAPPA_ENABLE_PARITY_TEST)
     enable_testing()
+    # 1) сверка порта по конформанс-векторам: не требует Python и папок образцов
+    add_test(NAME conformance_vectors
+             COMMAND pappa_conformance
+                     "${CMAKE_CURRENT_SOURCE_DIR}/../spec/conformance/vectors")
+    # 2) сверка порта с референсом Python на реальном наборе сечений
     find_package(Python3 COMPONENTS Interpreter QUIET)
     if (Python3_Interpreter_FOUND)
         add_test(NAME port_parity_python
