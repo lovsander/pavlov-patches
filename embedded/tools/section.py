@@ -10,17 +10,40 @@
 """
 import math
 
-N_POINTS = 360            # точек в сечении (шаг 1°)
+# Пресеты под разные платы: чем больше RAM/флеша, тем больше секций/патчей/степеней.
+PRESETS = {
+    'uno':  dict(n=360, half=45, patches=3, deg_max=8),    # 2 КБ RAM, 32 КБ флеш
+    'mega': dict(n=720, half=91, patches=7, deg_max=10),   # 8 КБ RAM, 256 КБ флеш
+}
+BOARD = 'uno'
+
+# значения по умолчанию (uno) — переопределяются через use()
+N_POINTS = 360
 N_PATCHES = 3
-HALF_TRAIN_PTS = 45       # полуширина обучающего окна в точках (окно 25% кольца)
+HALF_TRAIN_PTS = 45
 DEG_MIN = 4
-DEG_MAX = 8               # на 2 КБ RAM выше 8 смысла нет
+DEG_MAX = 8
 FLOOR_U = 1               # абсолютный пол RMSE, единицы 1e-5 мм (= 10 пм)
-PHASE_DEG = 0.0           # центры патчей: 0°, 120°, 240°
+PHASE_DEG = 0.0           # центры патчей: равномерно по кольцу
 PIT_CENTER_DEG = 118.0    # узкая канавка (проверяем, что степень на неё реагирует)
 PIT_WIDTH_DEG = 3.0
 PIT_DEPTH_MM = 0.30
 R0_MM = 15.0
+
+
+def use(board):
+    """Выбрать пресет платы (uno/mega)."""
+    global BOARD, N_POINTS, N_PATCHES, HALF_TRAIN_PTS, DEG_MAX
+    if board not in PRESETS:
+        raise SystemExit(f'неизвестная плата: {board} (есть {", ".join(PRESETS)})')
+    BOARD = board
+    p = PRESETS[board]
+    N_POINTS = p['n']
+    N_PATCHES = p['patches']
+    HALF_TRAIN_PTS = p['half']
+    DEG_MAX = p['deg_max']
+    return p
+
 
 
 def profile(i):
@@ -80,10 +103,14 @@ def write_header(path):
 
 
 if __name__ == "__main__":
+    import argparse
     import os
-    import sys
     here = os.path.dirname(os.path.abspath(__file__))
-    out = os.path.join(os.path.dirname(here), "uno", "section_data.h")
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--board', default='uno', choices=sorted(PRESETS))
+    args = ap.parse_args()
+    use(args.board)
+    out = os.path.join(os.path.dirname(here), BOARD, 'section_data.h')
     y, c = write_header(out)
-    print(f"записан {out}: точек {len(y)}, патчей {len(c)}, центры {c}, "
-          f"радиус {min(y) / 1e5:.4f}..{max(y) / 1e5:.4f} мм")
+    print(f'записан {out}: точек {len(y)}, патчей {len(c)}, центры {c}, '
+          f'радиус {min(y) / 1e5:.4f}..{max(y) / 1e5:.4f} мм')

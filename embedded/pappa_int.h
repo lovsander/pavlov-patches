@@ -30,10 +30,16 @@
 #define PP_CONST
 #endif
 
+// Ёмкости массивов задаются под плату (см. embedded/build_uno.ps1 -Board):
+// Uno: -DPP_MAX_PATCHES=3 -DPP_MAX_DEG=8, Mega: -DPP_MAX_PATCHES=7 -DPP_MAX_DEG=10.
+#ifndef PP_MAX_PATCHES
 #define PP_MAX_PATCHES 3
+#endif
+#ifndef PP_MAX_DEG
 #define PP_MAX_DEG 8
+#endif
 #define PP_MAX_COLS (PP_MAX_DEG + 1)
-#define PP_N_RMSE (PP_MAX_DEG / 2)  /* 4,6,8 -> 3 значения */
+#define PP_N_RMSE (PP_MAX_DEG / 2)  /* чётные степени 4..PP_MAX_DEG */
 
 // Единицы: радиус хранится как int32 в единицах 1e-5 мм (0.01 мкм),
 // угол неявный (равномерная сетка), координата окна x = (i - center)/half_train.
@@ -63,6 +69,8 @@ typedef struct {
     // выход
     int deg[PP_MAX_PATCHES];
     pp_real coef[PP_MAX_PATCHES][PP_MAX_COLS];   // ОТНОСИТЕЛЬНО yref_u; индексы x^j
+    pp_real cheb[PP_MAX_PATCHES][PP_MAX_COLS];   // коэффициенты Чебышёва (мм, k = 0..sel)
+    int n_cheb[PP_MAX_PATCHES];
     int32_t yref_u[PP_MAX_PATCHES];              // опорный радиус патча (единицы 1e-5 мм)
     pp_real rmse[PP_MAX_PATCHES][PP_N_RMSE];     // таблица RMSE по степеням, мм
     int n_rmse[PP_MAX_PATCHES];                  // сколько RMSE реально посчитано

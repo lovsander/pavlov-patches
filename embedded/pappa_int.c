@@ -204,6 +204,8 @@ int pp_fit(pp_model *m) {
             m->coef[p][j] = acc * 1.0e-5f;      // единицы 1e-5 мм -> мм
         }
         m->yref_u[p] = yref;
+        m->n_cheb[p] = sel + 1;
+        for (int k = 0; k <= sel; ++k) m->cheb[p][k] = cf[k] * 1.0e-5f;
         m->t_us[PP_PH_FINAL] += PP_TICK() - t_fin0;
         m->deg[p] = sel;
         m->n_rmse[p] = nr;

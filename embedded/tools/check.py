@@ -1,4 +1,4 @@
-﻿"""Проверка целочисленного ядра PAPPA: AVR/хост против референса на Python.
+"""Проверка целочисленного ядра PAPPA: AVR/хост против референса на Python.
 
 Что делает:
   1) регенерирует то же сечение, что ушло в прошивку (embedded/tools/section.py);
@@ -139,7 +139,7 @@ def reference_fit(y_u, centers, half, deg_min, deg_max, floor_u):
 
 
 def parse_report(text):
-    deg, coef, rmse, yref, time_us = {}, {}, {}, {}, None
+    deg, coef, rmse, yref, cheb, time_us = {}, {}, {}, {}, {}, None
     for line in text.splitlines():
         parts = line.split()
         if not parts:
@@ -150,11 +150,13 @@ def parse_report(text):
             yref[int(parts[1])] = int(parts[2]) / 1.0e5      # единицы 1e-5 мм -> мм
         elif parts[0] == 'COEF' and len(parts) >= 3:
             coef[int(parts[1])] = [int(v) / 1.0e8 for v in parts[2:]]
+        elif parts[0] == 'CHEB' and len(parts) >= 3:
+            cheb[int(parts[1])] = [int(v) / 1.0e8 for v in parts[2:]]
         elif parts[0] == 'RMSE' and len(parts) >= 3:
             rmse[int(parts[1])] = [int(v) / 1.0e9 for v in parts[2:]]
         elif parts[0] == 'TIME_US' and len(parts) >= 2:
             time_us = int(parts[1])
-    return deg, coef, rmse, yref, time_us
+    return deg, coef, rmse, yref, cheb, time_us
 
 
 def run_host():
@@ -170,7 +172,9 @@ def run_host():
     out_dir = os.path.join(ROOT, 'build_host')
     os.makedirs(out_dir, exist_ok=True)
     exe = os.path.join(out_dir, 'pp_host.exe' if os.name == 'nt' else 'pp_host')
-    cmd = [gcc, '-std=c99', '-O2', '-Wall', f'-I{ROOT}', f'-I{os.path.join(ROOT, "uno")}',
+    cmd = [gcc, '-std=c99', '-O2', '-Wall', f'-I{ROOT}',
+           f'-I{os.path.join(ROOT, S.BOARD)}',
+           f'-DPP_MAX_PATCHES={S.N_PATCHES}', f'-DPP_MAX_DEG={S.DEG_MAX}',
            os.path.join(ROOT, 'pappa_int.c'), os.path.join(ROOT, 'host_main.c'),
            '-o', exe, '-lm']
     print('сборка хоста: ' + ' '.join(cmd))
@@ -188,11 +192,11 @@ def run_wokwi(timeout_ms):
     if not token:
         print('нет WOKWI_CLI_TOKEN — токен берётся на https://wokwi.com/dashboard/ci')
         return None
-    log = os.path.join(ROOT, 'uno', 'build', 'serial.log')
+    log = os.path.join(ROOT, S.BOARD, 'build', 'serial.log')
     os.makedirs(os.path.dirname(log), exist_ok=True)
     if os.path.exists(log):
         os.remove(log)
-    cmd = [cli, os.path.join(ROOT, 'uno'), '--timeout', str(timeout_ms),
+    cmd = [cli, os.path.join(ROOT, S.BOARD), '--timeout', str(timeout_ms),
            '--serial-log-file', log, '--expect-text', 'PAPPA_DONE']
     print('запуск: ' + ' '.join(cmd))
     res = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -206,12 +210,15 @@ def run_wokwi(timeout_ms):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument('--board', default='uno', choices=sorted(S.PRESETS),
+                    help='пресет платы (uno/mega): сечение, патчи, степени')
     ap.add_argument('--log', help='файл с выводом устройства (serial log)')
     ap.add_argument('--host', action='store_true', help='собрать и запустить хост-сборку')
     ap.add_argument('--wokwi', action='store_true', help='запустить симуляцию Wokwi')
     ap.add_argument('--timeout', type=int, default=20000)
     ap.add_argument('--tol', type=float, default=TOL_CURVE_MM)
     args = ap.parse_args()
+    S.use(args.board)
 
     y_u = S.section_u()
     centers = S.center_points()
@@ -220,7 +227,7 @@ def main():
     if args.log:
         text, src = open(args.log, encoding='utf-8', errors='replace').read(), args.log
     elif args.wokwi:
-        text, src = run_wokwi(args.timeout), 'Wokwi (ATmega328P, 16 МГц)'
+        text, src = run_wokwi(args.timeout), f'Wokwi ({S.BOARD})'
     elif args.host:
         text, src = run_host(), 'хост (x86, тот же C-код)'
     else:
@@ -230,7 +237,7 @@ def main():
         print('числа устройства не получены')
         return 2
 
-    deg, coef, rmse, yref, time_us = parse_report(text)
+    deg, coef, rmse, yref, cheb, time_us = parse_report(text)
     if not deg:
         print('в выводе нет строк PATCH/COEF (прошивка не дошла до отчёта?)')
         print(text[-2000:])
@@ -247,15 +254,28 @@ def main():
           f'{"RMSE устр., мм":>14} {"RMSE эталон":>12}')
     for p, (rdeg, rcoef, rrmse) in enumerate(ref):
         d = deg.get(p, -1)
-        c = list(coef.get(p, []))
-        if c:
-            c[0] += yref.get(p, 0.0)      # устройство отдаёт модель ОТНОСИТЕЛЬНО опорного радиуса
         max_dc = 0.0
-        for t in range(201):
-            x = -1.0 + 2.0 * t / 200.0
-            fw = sum(v * x ** j for j, v in enumerate(c))
-            rf = sum(v * x ** j for j, v in enumerate(rcoef))
-            max_dc = max(max_dc, abs(fw - rf))
+        cq = cheb.get(p, [])
+        if cq:
+            # Устройство отдаёт коэффициенты ЧЕБЫШЁВА + опорный радиус: форма
+            # устойчива (Clenshaw), поэтому кривая сверяется именно по ним.
+            # Мономиальная форма при большой степени плохо обусловлена — на
+            # патче со трещиной степенью 10 она даёт сотни мкм (docs/embedded.md §12).
+            y_dev = yref.get(p, 0.0)
+            for t in range(201):
+                x = -1.0 + 2.0 * t / 200.0
+                fw = y_dev + cheb_sum(cq, len(cq) - 1, x)
+                rf = sum(v * x ** j for j, v in enumerate(rcoef))
+                max_dc = max(max_dc, abs(fw - rf))
+        else:
+            c = list(coef.get(p, []))
+            if c:
+                c[0] += yref.get(p, 0.0)
+            for t in range(201):
+                x = -1.0 + 2.0 * t / 200.0
+                fw = sum(v * x ** j for j, v in enumerate(c))
+                rf = sum(v * x ** j for j, v in enumerate(rcoef))
+                max_dc = max(max_dc, abs(fw - rf))
         rmse_dev = rmse.get(p, [])
         r_ok = bool(rmse_dev) and all(abs(a - b) <= TOL_RMSE_MM
                                       for a, b in zip(rmse_dev, rrmse))

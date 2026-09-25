@@ -36,6 +36,12 @@ static inline void pp_print_report(const pp_model *m, unsigned long time_us, int
         printf("\nRMSE %d", p);
         for (int t = 0; t < m->n_rmse[p]; ++t) printf(" %ld", pp_q_r(m->rmse[p][t]));
         printf("\n");
+        // Коэффициенты Чебышёва (мм, k = 0..deg) — УСТОЙЧИВАЯ форма для сверки
+        // кривой: мономиальные коэффициенты при большой степени плохо
+        // обусловлены, и float32 в них теряет точность (см. docs/embedded.md §12).
+        printf("CHEB %d", p);
+        for (int k = 0; k < m->n_cheb[p]; ++k) printf(" %ld", pp_q_c(m->cheb[p][k]));
+        printf("\n");
     }
     printf("N_TRAIN %d\n", m->n_train);
     printf("PHASE acc=%lu elbow=%lu final=%lu\n", (unsigned long)m->t_us[PP_PH_ACC],
