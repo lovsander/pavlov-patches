@@ -57,7 +57,7 @@ print(f"Степени патчей: {approx.get_degrees()}")
 # ============ Сохранение ============
 save_model(
     approx,
-    'section_0.appa.json',
+    'section_0.pappa.json',
     meta={
         'section_id': 0,
         'height_mm': 0.0,
@@ -65,20 +65,20 @@ save_model(
         'description': 'Сечение 0, сфера R=15',
     },
 )
-print("Сохранено: section_0.appa.json")
+print("Сохранено: section_0.pappa.json")
 
 # ============ Валидация ============
-ok, errors = validate_model('section_0.appa.json')
+ok, errors = validate_model('section_0.pappa.json')
 print(f"\nВалидация: {'OK' if ok else 'ОШИБКИ'}")
 for e in errors:
     print(f"  - {e}")
 
 # ============ Summary ============
 print()
-summary('section_0.appa.json')
+summary('section_0.pappa.json')
 
 # ============ Загрузка и проверка ============
-loaded = load_model('section_0.appa.json')
+loaded = load_model('section_0.pappa.json')
 fitted2 = loaded.eval(angles_grid)
 
 max_diff = float(np.max(np.abs(fitted - fitted2)))

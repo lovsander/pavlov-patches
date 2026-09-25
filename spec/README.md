@@ -2,7 +2,7 @@
 
 Language-independent contract of the method:
 
-- `appa.schema.json` — JSON Schema of the serialized model document.
+- `pappa.schema.json` — JSON Schema of the serialized model document.
 - `conformance/` — golden vectors (`input -> expected output`) used to verify
   every language port against the reference implementation.
 

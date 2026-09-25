@@ -1,4 +1,4 @@
-"""appa.io — чтение/запись: CSV-набор сечений и документ модели .appa.json."""
+"""appa.io — чтение/запись: CSV-набор сечений и документ модели .pappa.json."""
 
 from .dataset import (attach_ideal_grid, load_and_clean, load_sections,
                       ring_interp)

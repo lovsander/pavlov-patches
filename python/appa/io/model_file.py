@@ -2,12 +2,11 @@
 appa/io/model_file.py
 
 Сериализация модели (PatchApproximator / PitPatchApproximator) в документ
-описания сечения — формат .appa.json (v2.0).
+описания сечения — формат .pappa.json (v2.0).
 
-ПОЧЕМУ ПЕРЕИМЕНОВАНО из pmodel (2026-09-24, CONTEXT §27): слово pmodel не
-коррелировало с именем метода (APPA / пакет appa). Старые документы
-(format="pmodel", version="1.0") ЧИТАЮТСЯ прежним кодом через слой
-совместимости в load_model/validate_model.
+ИМЯ: pappa = Pavlov + APPA (Adaptive Poly-Patch Approximation, aka «Pavlov
+patches»). История имён (CONTEXT §27): pmodel -> appa -> pappa; документы
+предшественников ЧИТАЮТСЯ через слой совместимости в load_model/validate_model.
 """
 
 import json
@@ -17,12 +16,13 @@ from pathlib import Path
 import numpy as np
 
 
-FORMAT_NAME = "appa"
+FORMAT_NAME = "pappa"
 FORMAT_VERSION = "2.0"
 
-# формат-предшественник (до переименования): читаем, но не пишем
-LEGACY_FORMAT_NAME = "pmodel"
-LEGACY_VERSIONS = ("1.0",)
+# форматы-предшественники (до переименования): читаем, но не пишем.
+# pmodel v1.0 — файлы до канона [-1,1] (коэффициенты в сырых градусах);
+# appa v2.0 — промежуточное имя того же формата, что и pappa.
+LEGACY_FORMATS = (("pmodel", "1.0"), ("appa", "2.0"))
 
 
 def _appa_version():
@@ -135,19 +135,19 @@ def load_model(filepath):
     with filepath.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # Проверка формата. Документ-предшественник (pmodel v1.0) читается: структура
-    # та же, отличается только имя формата и версия (и, как правило, coord_mode
-    # отсутствует -> коэффициенты в сырых градусах, см. ниже).
+    # Проверка формата. Документы-предшественники (pmodel v1.0 и промежуточный
+    # appa v2.0) читаются: структура та же, отличается имя/версия (а в pmodel
+    # v1.0, как правило, нет coord_mode -> коэффициенты в сырых градусах).
     fmt = str(data.get("format", ""))
     ver = str(data.get("version", ""))
     if fmt == FORMAT_NAME:
         if ver != FORMAT_VERSION:
             raise ValueError(f"Неподдерживаемая версия: {ver!r}")
-    elif fmt == LEGACY_FORMAT_NAME and ver in LEGACY_VERSIONS:
+    elif (fmt, ver) in LEGACY_FORMATS:
         data["format"] = FORMAT_NAME
         data["version"] = FORMAT_VERSION
     else:
-        raise ValueError(f"Не документ APPA: format={fmt!r}, version={ver!r}")
+        raise ValueError(f"Не документ pappa: format={fmt!r}, version={ver!r}")
 
     g = data["global"]
 
@@ -245,9 +245,9 @@ def validate_model(filepath):
         if key not in data:
             errors.append(f"Missing field: {key}")
 
-    if str(data.get("format", "")) != FORMAT_NAME and not (
-            str(data.get("format", "")) == LEGACY_FORMAT_NAME
-            and str(data.get("version", "")) in LEGACY_VERSIONS):
+    if str(data.get("format", "")) != FORMAT_NAME and (
+            str(data.get("format", "")), str(data.get("version", ""))
+    ) not in LEGACY_FORMATS:
         errors.append(f"Wrong format: {data.get('format')} v{data.get('version')}")
 
     if "global" in data:

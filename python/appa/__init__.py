@@ -12,7 +12,7 @@ appa — Adaptive Poly-Patch Approximation (кодовая база «Pavlov pat
     pit_feature         фичер ям: оконный гаусс + ЕДИНАЯ сборка модели
                         (MODEL_DEFAULTS, PIT_DEFAULTS, build_model)
     geometry            узлы/центры патчей, круговые операции
-  appa.io         ввод/вывод: model_file (документ .appa.json: save/load/validate), dataset (CSV, очистка)
+  appa.io         ввод/вывод: model_file (документ .pappa.json: save/load/validate), dataset (CSV, очистка)
   appa.analysis   метрики и исследования: zones (детектор трещин), layout (раскладка
                   звездой), per_section_phase, phase_study, defect_study,
                   cleaner_study, pit_study, model_scan
