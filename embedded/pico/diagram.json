@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "author": "pavlov-patches",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-pi-pico", "id": "pico", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-logic-analyzer", "id": "logic", "top": 200, "left": 0, "attrs": {} }
+  ],
+  "connections": [
+    [ "$serialMonitor:RX", "pico:GP0", "", [] ],
+    [ "$serialMonitor:TX", "pico:GP1", "", [] ],
+    [ "logic:D0", "pico:GP25", "green", [] ],
+    [ "logic:D1", "pico:GP0", "blue", [] ]
+  ]
+}
+
