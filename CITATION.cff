@@ -2,13 +2,19 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "pavlov-patches: PAPPA — Piecewise Adaptive Poly-Patch Approximation"
 type: software
+version: "0.1.0"
+date-released: "2026-09-25"
 authors:
   - family-names: "Pavlov"
     given-names: "Alexander"
     alias: "lovsander"
     # orcid: "https://orcid.org/0000-0000-0000-0000"
 repository-code: "https://github.com/lovsander/pavlov-patches"
+# MIT с ДОПОЛНИТЕЛЬНЫМ ограничением области применения (см. LICENSE):
+# ПО нельзя использовать в военных системах, произведённых вне РФ. Из-за этого
+# проект — source-available, а не OSI open source.
 license: MIT
+
 keywords:
   - polynomial approximation
   - piecewise polynomial
