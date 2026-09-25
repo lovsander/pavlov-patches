@@ -54,3 +54,37 @@ def print_built_sample(root_dir, rows, manifest, docs=()):
         print()
         print(f"Валидация документов: {len(docs) - len(bad)}/{len(docs)} OK"
               + (f", ошибки: {bad}" if bad else ""))
+
+
+def print_verify(rows, summary, tol_mm, py_name, cpp_name, report_path=None):
+    """
+    Таблица сверки порта с референсом (Python <-> C++).
+
+    rows    — по сечению: section_id, height_mm, degrees_equal, pits_py, pits_cpp,
+              max_delta, rmse_py, rmse_cpp, ok;
+    summary — {"max_delta", "worst_section", "n_ok", "n_total", "verdict"}.
+    """
+    bar = "=" * 104
+    print(bar)
+    print(f"СВЕРКА ПОРТА: Python «{py_name}» <-> C++ «{cpp_name}»")
+    print(bar)
+    print(f"Допуск на расхождение контура: {tol_mm:g} мм")
+    print()
+    print(f"{'sec':>4} {'h, мм':>7} {'deg==':>6} {'ям py/cpp':>10} "
+          f"{'max|Δ|, мм':>12} {'RMSE py':>10} {'RMSE cpp':>10}  итог")
+    for r in rows:
+        rmse_py = f"{r['rmse_py']:.6f}" if r.get("rmse_py") is not None else "     -"
+        rmse_cpp = f"{r['rmse_cpp']:.6f}" if r.get("rmse_cpp") is not None else "     -"
+        print(f"{r['section_id']:>4} {r['height_mm']:>7.1f} "
+              f"{('да' if r.get('degrees_equal') else 'НЕТ'):>6} "
+              f"{r.get('pits_py', 0):>4}/{r.get('pits_cpp', 0):<5} "
+              f"{r.get('max_delta', float('nan')):>12.3e} {rmse_py:>10} {rmse_cpp:>10}"
+              f"  {'OK' if r.get('ok') else 'ПЛОХО'}")
+    print()
+    print(f"Максимум расхождения: {summary['max_delta']:.3e} мм "
+          f"(худшее сечение {summary['worst_section']})")
+    print(f"Сечений в допуске: {summary['n_ok']}/{summary['n_total']}")
+    print(f"ВЫВОД: {summary['verdict']}")
+    if report_path:
+        print(f"Отчёт: {report_path}")
+
