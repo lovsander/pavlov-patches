@@ -48,6 +48,9 @@ static unsigned long timer_us(void) {
     return ((unsigned long)ovf * 65536UL + (unsigned long)cnt) * 4UL;
 }
 
+// Хук для инструментации ядра (собирается с -DPP_TIMING).
+uint32_t pp_tick(void) { return (uint32_t)timer_us(); }
+
 int main(void) {
     UBRR0 = (uint16_t)(F_CPU_HZ / (16UL * 9600UL) - 1);
     UCSR0B = (1 << TXEN0);

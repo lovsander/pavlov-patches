@@ -38,6 +38,8 @@ static inline void pp_print_report(const pp_model *m, unsigned long time_us, int
         printf("\n");
     }
     printf("N_TRAIN %d\n", m->n_train);
+    printf("PHASE acc=%lu elbow=%lu final=%lu\n", (unsigned long)m->t_us[PP_PH_ACC],
+           (unsigned long)m->t_us[PP_PH_ELBOW], (unsigned long)m->t_us[PP_PH_FINAL]);
     printf("TIME_US %lu\n", time_us);
     printf(rc == 0 ? "PAPPA_DONE\n" : "PAPPA_FAIL\n");
 }

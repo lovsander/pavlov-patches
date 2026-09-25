@@ -39,6 +39,18 @@
 // угол неявный (равномерная сетка), координата окна x = (i - center)/half_train.
 typedef float pp_real;
 
+// Инструментация (по желанию): если определить PP_TIMING, ядро будет звать
+// pp_tick() — на AVR это микросекунды из таймера. Без PP_TIMING всё
+// превращается в нули и не стоит ни байта.
+#ifdef PP_TIMING
+uint32_t pp_tick(void);
+#define PP_TICK() pp_tick()
+#else
+#define PP_TICK() 0u
+#endif
+
+enum { PP_PH_ACC = 0, PP_PH_ELBOW = 1, PP_PH_FINAL = 2, PP_N_PHASES = 3 };
+
 typedef struct {
     int n;                 // точек в сечении
     const int32_t *y_u;    // радиус, единицы 1e-5 мм
@@ -55,6 +67,7 @@ typedef struct {
     pp_real rmse[PP_MAX_PATCHES][PP_N_RMSE];     // таблица RMSE по степеням, мм
     int n_rmse[PP_MAX_PATCHES];                  // сколько RMSE реально посчитано
     int n_train;                                 // точек в окне (для отчёта)
+    uint32_t t_us[PP_N_PHASES];                  // мкс по фазам (если PP_TIMING)
 } pp_model;
 
 // Обучить все патчи. Возврат: 0 — ок, <0 — ошибка параметров.

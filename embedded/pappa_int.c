@@ -27,12 +27,14 @@ static const int16_t PP_TM[PP_MAX_COLS][PP_MAX_COLS] = {
 static int pp_mi(int a, int c) { return a * PP_MAX_COLS - (a * (a - 1)) / 2 + (c - a); }
 // (для PP_MAX_COLS = 9 это ровно 45 элементов)
 
-// T_k(xq) для k = 0..deg_max, всё в Q24.
-static void pp_cheb_row(int64_t xq, int deg_max, int64_t *T) {
-    T[0] = PP_ONE;
+// T_k(xq) для k = 0..deg_max, всё в Q24, значения — int32 (|T| <= 2^24).
+// ВАЖНО для AVR: значения держим в int32, иначе произведение становится
+// 64x64->64 (__muldi3, сотни циклов на точку) вместо 32x32->64 (__mulsi3).
+static void pp_cheb_row(int32_t xq, int deg_max, int32_t *T) {
+    T[0] = (int32_t)PP_ONE;
     if (deg_max >= 1) T[1] = xq;
     for (int k = 2; k <= deg_max; ++k)
-        T[k] = ((2 * T[k - 1] * xq) >> PP_SHIFT) - T[k - 2];
+        T[k] = (int32_t)(((int64_t)2 * T[k - 1] * xq) >> PP_SHIFT) - T[k - 2];
 }
 
 // Σ c_k T_k(x) по схеме Кленшоу (устойчиво, c в «единицах y_u»).
@@ -82,6 +84,7 @@ int pp_fit(pp_model *m) {
     const int half = m->half_train_pts;
     const int ncol = m->deg_max + 1;
     m->n_train = 2 * half + 1;
+    for (int i = 0; i < PP_N_PHASES; ++i) m->t_us[i] = 0;
 
     for (int p = 0; p < m->n_patches; ++p) {
         const int center = m->center_pt[p];
@@ -96,25 +99,29 @@ int pp_fit(pp_model *m) {
         for (int k = 0; k < PP_MAX_COLS; ++k) b[k] = 0;
 
         const int nwin = 2 * half + 1;
-        int64_t T[PP_MAX_COLS];
+        const uint32_t t_acc0 = PP_TICK();
+        int32_t T[PP_MAX_COLS];
         for (int k = 0; k < nwin; ++k) {
             const int off = k - half;
             int i = center + off;
             while (i < 0) i += m->n;
             while (i >= m->n) i -= m->n;
-            const int64_t xq = ((int64_t)off << PP_SHIFT) / half;   // Q24, |x| <= 1
+            const int32_t xq = (int32_t)(((int64_t)off << PP_SHIFT) / half);  // Q24
             pp_cheb_row(xq, m->deg_max, T);
-            const int64_t yc = (int64_t)PP_READ_U(m->y_u, i) - yref;
+            const int32_t yc = (int32_t)(PP_READ_U(m->y_u, i) - yref);
             // Накопление БЕЗ сдвига: T <= 2^24, T*T <= 2^48, yc <= ~3e5,
-            // T*yc <= ~5e12; при nwin <= 4096 суммы < 2^60 — int64 хватает,
-            // и усечение (1 LSB на слагаемое) не портит результат.
+            // T*yc <= ~5e12; при nwin <= 4096 суммы < 2^60 — int64 хватает.
+            // Операнды int32 -> на AVR это 32x32->64 (одна пара mul), а не
+            // 64x64->64 (__muldi3): разница на Uno примерно 50x.
             for (int a = 0; a < ncol; ++a) {
-                b[a] += T[a] * yc;
-                for (int c = a; c < ncol; ++c) M[pp_mi(a, c)] += T[a] * T[c];
+                b[a] += (int64_t)T[a] * yc;
+                for (int c = a; c < ncol; ++c) M[pp_mi(a, c)] += (int64_t)T[a] * T[c];
             }
         }
 
         // --- правило «локтя»: RMSE по ЯВНЫМ остаткам (Clenshaw) + абсолютный пол
+        m->t_us[PP_PH_ACC] += PP_TICK() - t_acc0;
+        const uint32_t t_elb0 = PP_TICK();
         pp_real cf[PP_MAX_COLS];
         pp_real rmse_tab[PP_N_RMSE];
         for (int t = 0; t < PP_N_RMSE; ++t) rmse_tab[t] = 0.0f;
@@ -168,6 +175,8 @@ int pp_fit(pp_model *m) {
         }
 
         // финальные коэффициенты выбранной степени (базис Чебышёва, единицы y_u)
+        m->t_us[PP_PH_ELBOW] += PP_TICK() - t_elb0;
+        const uint32_t t_fin0 = PP_TICK();
         {
             const int nn = sel + 1;
             pp_real A[PP_MAX_COLS * (PP_MAX_COLS + 1)];
@@ -195,6 +204,7 @@ int pp_fit(pp_model *m) {
             m->coef[p][j] = acc * 1.0e-5f;      // единицы 1e-5 мм -> мм
         }
         m->yref_u[p] = yref;
+        m->t_us[PP_PH_FINAL] += PP_TICK() - t_fin0;
         m->deg[p] = sel;
         m->n_rmse[p] = nr;
         for (int t = 0; t < PP_N_RMSE; ++t) m->rmse[p][t] = rmse_tab[t];

@@ -21,7 +21,7 @@ foreach ($t in @($gcc, $objcopy, $size)) {
 }
 
 $common = @('-mmcu=atmega328p', '-DF_CPU=16000000UL', '-std=c99', '-Os', '-Wall',
-            '-Wextra', '-Wno-unused-parameter', "-I$root", "-I$uno")
+            '-Wextra', '-Wno-unused-parameter', '-DPP_TIMING', "-I$root", "-I$uno")
 
 Write-Host '--- compile ---'
 & $gcc @common '-fstack-usage' -c (Join-Path $root 'pappa_int.c') -o (Join-Path $build 'pappa_int.o')
