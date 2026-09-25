@@ -55,12 +55,17 @@ MODEL_CFG = dict(MODEL_DEFAULTS)
 
 
 def profile(angles, with_pits=True, ripple=0.01):
-    """Аналитический профиль: основа + две ямы (90° и 210°) + детерминированная рябь."""
+    """Аналитический профиль: основа + две РЕЗКИЕ ямы (90° и 210°) + рябь.
+
+    Ямы сделаны узкими «ступенями», а не гладкими гауссианами: детектор band
+    сравнивает узкую (1°) и широкую (10°) медианы, и на гладкой яме разницы нет —
+    зон не находится, вектор проверялся бы тривиально.
+    """
     a = np.deg2rad(angles)
     r = 15.0 + 0.4 * np.sin(2.0 * a) + 0.2 * np.cos(3.0 * a)
     if with_pits:
-        r = (r - 1.1 * np.exp(-((angles - 90.0) / 2.5) ** 2)
-             - 0.8 * np.exp(-((angles - 210.0) / 2.0) ** 2))
+        r = r - 1.1 * (np.abs(angles - 90.0) <= 1.5)
+        r = r - 0.8 * (np.abs(angles - 210.0) <= 1.0)
     return r + ripple * np.sin(np.deg2rad(37.0 * angles))
 
 
@@ -151,10 +156,22 @@ def build_vectors():
     radii_plain = profile(angles, with_pits=False, ripple=0.004)
     radii_pits = profile(angles, with_pits=True)
     pits_known = [90.0, 210.0]                          # центры, видимые детектору
+    # Шумовая подложка: высокочастотная часть даёт разницу узкой/широкой медиан
+    # (band детектора), низкочастотная — ненулевой масштаб остатка у очистителя.
+    noise = (0.03 * np.sin(np.deg2rad(47.0 * angles))
+             + 0.02 * np.sin(np.deg2rad(13.0 * angles)))
+    radii_pits = radii_pits + noise
+    radii_plain = radii_plain + noise
 
-    # очистка: тот же профиль + детерминированные всплески (каждый 97-й)
-    radii_spiky = radii_plain.copy()
-    radii_spiky[np.arange(5, len(radii_plain), 97)] += 0.9
+    # очистка: тот же профиль + шумовая подложка + детерминированные всплески.
+    # Подложка нужна, чтобы у остатка после медианного фильтра был НЕНУЛЕВОЙ
+    # масштаб: при идеально гладких данных IQR(res) ~ 0, и очиститель ничего не
+    # помечает (порог Тьюки делится на масштаб) — вектор проверялся бы тривиально.
+    radii_spiky = (radii_plain
+                   + 0.02 * np.sin(np.deg2rad(311.0 * angles))
+                   + 0.015 * np.sin(np.deg2rad(97.0 * angles)))
+    radii_spiky = radii_spiky.copy()
+    radii_spiky[np.arange(5, len(radii_spiky), 97)] += 0.9
 
     vectors = [
         vector_model("model_patches_only", angles, radii_plain, pits=None),
