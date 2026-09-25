@@ -74,6 +74,12 @@ python studies/verify_port_figure.py --cpp-dir samples/<name>_cpp   # -> python/
 | `samples/` | Generated sample folders (`sample.json` + one `pappa.json` per section + `report/`) — not committed |
 | `cpp/`  | C++17 port (CMake): full pipeline, checked numerically against the reference (`ctest`) |
 | `go/`   | Go port: full pipeline + core, checked by the conformance vectors and numerically against the reference (`go test ./...`) |
+| `c/`    | C99 port (dependency-free core usable on MCU + host pipeline), checked by the vectors (`python/studies/check_c_port.py`) and numerically (`verify_port.py`) |
+| `js/`   | JavaScript port (Node, ESM, zero packages): vectors + pipeline, checked numerically (`node js/cmd/conformance.js`) |
+| `java/` | Java port (JDK, plain `javac`, own mini-JSON): vectors + pipeline + `pappa.SelfTest` |
+| `kotlin/` | Kotlin port (uses the `kotlinc` bundled with Android Studio): vectors + pipeline + `pappa.SelfTest` |
+| `rust/` | Rust port (cargo, **no crates**, offline build): vectors + pipeline + `cargo test` |
+| `pascal/` | Free Pascal port (FPC 3.2, no units beyond RTL): vectors + pipeline + `selftest` |
 | `docs/` | Method description, presentation assets, embedded (MCU) feasibility study |
 | `spec/` | Model document schema + conformance vectors |
 

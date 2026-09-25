@@ -97,3 +97,7 @@ build-cmake/
 
 # rust/: compiled binaries (not committed; sources are)
 /rust/target/
+
+# pascal/: compiled binaries and units (not committed; sources are)
+/pascal/bin/
+/pascal/lib/
