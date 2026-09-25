@@ -24,6 +24,21 @@ PIT_DEFAULTS = {
     "tapering": True,          # False = чистый гаусс (только для сравнений)
 }
 
+# ЕДИНЫЙ ИСТОЧНИК параметров МОДЕЛИ — раскладка и правило степени (CONTEXT §25, §27).
+# Раньше эти числа были скопированы в CONFIG каждого исследования и в демо, из-за
+# чего N, фаза и допуски могли разъехаться. Раскладка выбрана в §25: N=7 при общей
+# фазе 24.75° (узлы уходят от трещин, паритет с портом — один параметр в файле).
+MODEL_DEFAULTS = {
+    "n_patches": 7,
+    "phase_deg": 24.75,
+    "deg_min": 4,
+    "deg_max": 14,
+    "amplitude_scale": 180.0,   # историческая метрика, степень НЕ выбирает
+    "overlap_train": 15.0,
+    "overlap_use": 5.0,
+    "deg_elbow_tol": 0.05,
+}
+
 
 def validate_pit_cfg(cfg):
     """Проверка согласованности параметров фичера: окно не уже ядра, σ > 0."""
@@ -59,6 +74,39 @@ def pit_shape_deg(delta_deg, sigma_deg=3.0, core_sigma=2.0, window_sigma=3.2,
         return val
     t = np.clip((edge - d) / (edge - core), 0.0, 1.0)
     return val * t * t * (3.0 - 2.0 * t)
+
+
+def build_model(cfg=None, pits=None):
+    """
+    ЕДИНАЯ точка сборки модели (CONTEXT §27, шаг 2).
+
+    Возвращает НЕобученную модель: вызывающий сам зовёт fit(). Это единственное
+    место, где собираются раскладка (MODEL_DEFAULTS) и форма фичера ям
+    (PIT_DEFAULTS) — исследования, пайплайн и порт должны ходить сюда, чтобы
+    N / фаза / допуски / форма ямы не разъезжались.
+
+    cfg  — словарь параметров; недостающие ключи берутся из MODEL_DEFAULTS,
+           параметры ямы — с именами из PIT_DEFAULTS (sigma_deg, pit_core_sigma,
+           pit_window_sigma, pit_min_amp, tapering) + degree_with_pits;
+    pits — углы центров ям, °; пусто/None -> чистая полиномиальная модель,
+           иначе полином + оконный гаусс (PitPatchApproximator).
+    """
+    cfg = dict(cfg or {})
+    mk = dict(MODEL_DEFAULTS)
+    mk.update({k: v for k, v in cfg.items() if k in MODEL_DEFAULTS})
+
+    if not pits:
+        return PatchApproximator(**mk)
+
+    pk = {
+        "sigma_deg": cfg.get("sigma_deg", PIT_DEFAULTS["sigma_deg"]),
+        "core_sigma": cfg.get("pit_core_sigma", PIT_DEFAULTS["pit_core_sigma"]),
+        "window_sigma": cfg.get("pit_window_sigma", PIT_DEFAULTS["pit_window_sigma"]),
+        "pit_min_amp": cfg.get("pit_min_amp", PIT_DEFAULTS["pit_min_amp"]),
+        "tapering": cfg.get("tapering", PIT_DEFAULTS["tapering"]),
+        "degree_with_pits": cfg.get("degree_with_pits", False),
+    }
+    return PitPatchApproximator(pits=list(pits), **pk, **mk)
 
 
 class PitPatchApproximator(PatchApproximator):

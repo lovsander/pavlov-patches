@@ -6,20 +6,23 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from ..core.patch_approximator import PatchApproximator
 from .layout import section_crack_zones
 from ..io.dataset import attach_ideal_grid, load_sections, ring_interp
 from ..paths import resolve_path
-from ..core.pit_feature import PitPatchApproximator
+from ..core.pit_feature import MODEL_DEFAULTS, build_model
 from ..viz.pit_figs import VARIANTS
 
 def model_kwargs(cfg):
-    """Аргументы конструктора модели из CONFIG (одна точка правды)."""
-    m = cfg["model"]
-    return {"deg_min": m["deg_min"], "deg_max": m["deg_max"],
-            "amplitude_scale": m["amplitude_scale"],
-            "overlap_train": m["overlap_train"], "overlap_use": m["overlap_use"],
-            "phase_deg": cfg["phase_deg"], "deg_elbow_tol": m["deg_elbow_tol"]}
+    """
+    Параметры модели из CONFIG исследования; недостающие берутся из
+    MODEL_DEFAULTS (единый источник раскладки — N=7, phase 24.75°, допуски,
+    см. appa/core/pit_feature.py и CONTEXT §27).
+    """
+    m = dict(MODEL_DEFAULTS)
+    m.update(cfg.get("model", {}))
+    m["n_patches"] = cfg.get("n_patches", m["n_patches"])
+    m["phase_deg"] = cfg.get("phase_deg", m["phase_deg"])
+    return m
 
 
 def fit_variant(cfg, sec, pits, variant):
@@ -32,17 +35,21 @@ def fit_variant(cfg, sec, pits, variant):
     Степени у всех вариантов ОДИНАКОВЫЕ: у "poly" — правило «локтя» базовой
     модели, у pit-вариантов степень берётся такая же (degree_with_pits=False),
     чтобы сравнивался только способ описания ямы.
+
+    Модель собирается через единую точку сборки build_model() — чтобы N, фаза
+    и форма ямы не разъезжались между исследованиями и пайплайном.
     """
     kw = model_kwargs(cfg)
     if variant == "poly":
-        ap = PatchApproximator(n_patches=cfg["n_patches"], **kw)
+        ap = build_model(kw, pits=None)
     else:
-        ap = PitPatchApproximator(pits=pits, sigma_deg=cfg["sigma_deg"],
-                                  tapering=(variant == "pit_win"),
-                                  core_sigma=cfg["pit_core_sigma"],
-                                  window_sigma=cfg["pit_window_sigma"],
-                                  pit_min_amp=cfg["pit_min_amp"],
-                                  n_patches=cfg["n_patches"], **kw)
+        ap = build_model(dict(kw,
+                              sigma_deg=cfg["sigma_deg"],
+                              pit_core_sigma=cfg["pit_core_sigma"],
+                              pit_window_sigma=cfg["pit_window_sigma"],
+                              pit_min_amp=cfg["pit_min_amp"],
+                              tapering=(variant == "pit_win")),
+                         pits=pits)
     ap.fit(sec["angles_clean"], sec["radii_clean"])
     return ap
 

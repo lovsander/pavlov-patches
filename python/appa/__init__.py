@@ -9,7 +9,8 @@ appa — Adaptive Poly-Patch Approximation (кодовая база «Pavlov pat
     outlier_cleaner     OutlierCleaner + AutoOutlierCleaner
     signal_tools        MAD/robust sigma/IQR, круговые фильтры, GMM
     crack_detector      CrackDetector (разница грубой и точной модели)
-    pit_feature         PitPatchApproximator — ПРОТОТИП: оконный гаусс (яма)
+    pit_feature         фичер ям: оконный гаусс + ЕДИНАЯ сборка модели
+                        (MODEL_DEFAULTS, PIT_DEFAULTS, build_model)
     geometry            узлы/центры патчей, круговые операции
   appa.io         ввод/вывод: pmodel (save/load/validate), dataset (CSV, очистка)
   appa.analysis   метрики и исследования: zones (детектор трещин), layout (раскладка
@@ -28,12 +29,16 @@ appa — Adaptive Poly-Patch Approximation (кодовая база «Pavlov pat
 
 from .core.crack_detector import CrackDetector
 from .core.outlier_cleaner import AutoOutlierCleaner, OutlierCleaner, build_cleaner
-from .core.patch_approximator import PatchApproximator
-from .paths import PY_ROOT, REPO_ROOT, resolve_path
+from .core.patch_approximator import COORD_MODE, PatchApproximator
+from .core.pit_feature import (MODEL_DEFAULTS, PIT_DEFAULTS, build_model,
+                               validate_pit_cfg)
+from .paths import PY_ROOT, REPO_ROOT, resolve_path, resolve_plot
 
 __all__ = [
     "PatchApproximator", "OutlierCleaner", "AutoOutlierCleaner", "build_cleaner",
-    "CrackDetector", "PY_ROOT", "REPO_ROOT", "resolve_path",
+    "CrackDetector", "PY_ROOT", "REPO_ROOT", "resolve_path", "resolve_plot",
+    "COORD_MODE", "build_model", "MODEL_DEFAULTS", "PIT_DEFAULTS",
+    "validate_pit_cfg",
 ]
 
 __version__ = "0.2.0"
