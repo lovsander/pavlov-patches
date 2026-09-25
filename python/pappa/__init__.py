@@ -17,10 +17,12 @@ pappa — Piecewise Adaptive Poly-Patch Approximation (PAPPA), aka «Pavlov patc
                   dataset (CSV, очистка)
   pappa.analysis   метрики и исследования: zones (детектор трещин), layout (раскладка
                   звездой), per_section_phase, phase_study, defect_study,
-                  cleaner_study, pit_study, model_scan
-  pappa.viz        рисунки: style, star, layout_figs, phase_figs, pit_figs,
-                  defect_figs, cleaner_figs
-  pappa.report     текстовые отчёты в консоль (layout/phase/pit/defect/cleaner)
+                  cleaner_study, pit_study, pit_window_study, model_scan,
+                  fourier_study, port_study (сверка порта с референсом)
+  pappa.viz        рисунки: star, layout_figs, phase_figs, pit_figs, pit_window_figs,
+                  defect_figs, cleaner_figs, fourier_figs, port_figs
+  pappa.report     текстовые отчёты в консоль (layout/phase/pit/defect/cleaner/
+                  fourier/pit_window/sample)
 
 Точки входа (тонкие скрипты, запускаются напрямую):
   studies/  — исследования (compare_*, explore_*)
