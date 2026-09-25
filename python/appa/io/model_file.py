@@ -14,6 +14,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
+
 
 FORMAT_NAME = "appa"
 FORMAT_VERSION = "2.0"
@@ -81,6 +83,19 @@ def save_model(approx, filepath, meta=None):
         "statistics": approx.statistics_ if hasattr(approx, "statistics_") else {},
     }
 
+    # Фичер ям (PitPatchApproximator): глобальная часть — форма окна и список
+    # центров ям; локальная — terms по патчам. Отсутствие блока = чистая
+    # полиномиальная модель (так читаются и старые документы).
+    if hasattr(approx, "sigma_deg"):
+        data["global"]["pit"] = {
+            "sigma_deg": float(approx.sigma_deg),
+            "core_sigma": float(approx.core_sigma),
+            "window_sigma": float(approx.window_sigma),
+            "pit_min_amp": float(approx.pit_min_amp),
+            "tapering": bool(approx.tapering),
+            "centers_deg": [float(c) for c in getattr(approx, "pits", [])],
+        }
+
     for p in approx.patches_:
         patch = {
             "center_deg": float(p["center"]),
@@ -92,6 +107,12 @@ def save_model(approx, filepath, meta=None):
             patch["metrics"] = {k: float(v) for k, v in p["metrics"].items()}
         if "stats" in p:
             patch["stats"] = {k: float(v) for k, v in p["stats"].items()}
+        # оконные гауссы этого патча: смещение от центра (в градусах) + амплитуда
+        if "pit_offsets" in p:
+            patch["pit_terms"] = [
+                {"dx_deg": float(dx), "amp": float(a)}
+                for dx, a in zip(p["pit_offsets"], p["pit_coefs"])
+            ]
         data["patches"].append(patch)
 
     filepath = Path(filepath)
@@ -130,23 +151,47 @@ def load_model(filepath):
 
     g = data["global"]
 
-    approx = PatchApproximator(
-        n_patches=int(g["n_patches"]),
-        deg_min=int(g["deg_min"]),
-        deg_max=int(g["deg_max"]),
-        amplitude_scale=float(g["amplitude_scale"]),
-        overlap_train=float(g["overlap_train_deg"]),
-        overlap_use=float(g["overlap_use_deg"]),
-        phase_deg=float(g.get("phase_deg", 0.0)),
-        # старые файлы без поля допуска читаются как 0.05
-        deg_elbow_tol=float(g.get("deg_elbow_tol", 0.05)),
-        # старые файлы писали коэффициенты в СЫРЫХ градусах (до канона [-1,1]);
-        # читаем так же, иначе модель считалась бы неверно
-        coord_mode=str(g.get("coord_mode", "raw")),
-    )
+    # Фичер ям: если в документе есть блок global.pit — собираем именно
+    # PitPatchApproximator (форма окна + центры ям), иначе обычную модель.
+    pit = g.get("pit")
+    if pit:
+        from ..core.pit_feature import PitPatchApproximator
+        approx = PitPatchApproximator(
+            pits=[float(c) for c in pit["centers_deg"]],
+            sigma_deg=float(pit["sigma_deg"]),
+            core_sigma=float(pit["core_sigma"]),
+            window_sigma=float(pit["window_sigma"]),
+            pit_min_amp=float(pit["pit_min_amp"]),
+            tapering=bool(pit["tapering"]),
+            n_patches=int(g["n_patches"]),
+            deg_min=int(g["deg_min"]),
+            deg_max=int(g["deg_max"]),
+            amplitude_scale=float(g["amplitude_scale"]),
+            overlap_train=float(g["overlap_train_deg"]),
+            overlap_use=float(g["overlap_use_deg"]),
+            phase_deg=float(g.get("phase_deg", 0.0)),
+            deg_elbow_tol=float(g.get("deg_elbow_tol", 0.05)),
+            coord_mode=str(g.get("coord_mode", "raw")),
+        )
+    else:
+        approx = PatchApproximator(
+            n_patches=int(g["n_patches"]),
+            deg_min=int(g["deg_min"]),
+            deg_max=int(g["deg_max"]),
+            amplitude_scale=float(g["amplitude_scale"]),
+            overlap_train=float(g["overlap_train_deg"]),
+            overlap_use=float(g["overlap_use_deg"]),
+            phase_deg=float(g.get("phase_deg", 0.0)),
+            # старые файлы без поля допуска читаются как 0.05
+            deg_elbow_tol=float(g.get("deg_elbow_tol", 0.05)),
+            # старые файлы писали коэффициенты в СЫРЫХ градусах (до канона [-1,1]);
+            # читаем так же, иначе модель считалась бы неверно
+            coord_mode=str(g.get("coord_mode", "raw")),
+        )
 
     # Восстанавливаем состояние
     approx.half_sector_ = float(g["half_sector_deg"])
+    approx.half_train_ = float(g["half_train_deg"])   # нужно фичеру ям
     approx.centers_ = [p["center_deg"] for p in data["patches"]]
     approx.patches_ = []
     approx.degrees_ = []
@@ -165,10 +210,14 @@ def load_model(filepath):
             patch["metrics"] = {k: float(v) for k, v in p["metrics"].items()}
         if "stats" in p:
             patch["stats"] = {k: float(v) for k, v in p["stats"].items()}
+        if "pit_terms" in p:
+            patch["pit_offsets"] = np.array([float(t["dx_deg"])
+                                             for t in p["pit_terms"]])
+            patch["pit_coefs"] = np.array([float(t["amp"])
+                                           for t in p["pit_terms"]])
         approx.patches_.append(patch)
         approx.degrees_.append(patch["degree"])
 
-    import numpy as np
     approx.degrees_ = np.array(approx.degrees_)
     approx.statistics_ = data.get("statistics", {})
     approx.is_fitted_ = True
@@ -213,6 +262,24 @@ def validate_model(filepath):
         if mode is not None and mode not in ("normalized", "raw"):
             errors.append(f"global.coord_mode неизвестен: {mode!r}")
 
+        # Фичер ям: окно не должно быть уже ядра, центры обязаны лежать на кольце
+        pit = g.get("pit")
+        if pit is not None:
+            try:
+                sig = float(pit["sigma_deg"])
+                core = float(pit["core_sigma"]) * sig
+                win = float(pit["window_sigma"]) * sig
+                if sig <= 0.0:
+                    errors.append("global.pit.sigma_deg должен быть > 0")
+                if win < core:
+                    errors.append(
+                        f"global.pit: окно {win:.3f}° уже ядра {core:.3f}°")
+                for c in pit["centers_deg"]:
+                    if not (0.0 <= float(c) < 360.0):
+                        errors.append(f"global.pit.centers_deg: {c} вне [0,360)")
+            except (KeyError, TypeError, ValueError) as e:
+                errors.append(f"global.pit: некорректный блок ({e!r})")
+
         if "patches" in data and "n_patches" in g:
             n = int(g["n_patches"])
             if len(data["patches"]) != n:
@@ -247,6 +314,22 @@ def validate_model(filepath):
             errors.append(
                 f"patch[{i}]: coefs len {n_coefs} != degree+1 {deg+1}"
             )
+
+        # Термины фичера ям: смещение обязано попадать в обучающее окно патча
+        if "pit_terms" in p:
+            if data.get("global", {}).get("pit") is None:
+                errors.append(f"patch[{i}]: pit_terms без global.pit")
+            half_train = float(data.get("global", {}).get("half_train_deg", 0.0))
+            for j, t in enumerate(p["pit_terms"]):
+                try:
+                    dx = float(t["dx_deg"])
+                    amp = float(t["amp"])
+                except (KeyError, TypeError, ValueError) as e:
+                    errors.append(f"patch[{i}].pit_terms[{j}]: {e!r}")
+                    continue
+                if abs(dx) > half_train + 1e-9:
+                    errors.append(
+                        f"patch[{i}].pit_terms[{j}]: dx={dx} вне окна ±{half_train}")
 
         # Проверка политики степени.
         # Новая политика (RMSE-«локоть») проверяется по сохранённым метрикам:
@@ -313,9 +396,15 @@ def summary(filepath):
     print(f"coord_mode: {g.get('coord_mode', 'raw')} "
           f"(канон: normalized = x/half_train ∈ [-1,1])")
 
+    pit = g.get("pit")
+    if pit:
+        print(f"фичер ям: sigma {pit['sigma_deg']}°, ядро {pit['core_sigma']}σ, "
+              f"окно {pit['window_sigma']}σ, tapering={pit['tapering']}, "
+              f"центров ям {len(pit['centers_deg'])}")
+
     print("\nPatches:")
     print(f"{'#':>3} {'center':>8} {'deg':>4} {'n_pts':>6} "
-          f"{'amp_mm':>8} {'amp_norm':>10} {'rmse':>10}")
+          f"{'amp_mm':>8} {'amp_norm':>10} {'rmse':>10} {'pit':>4}")
     for i, p in enumerate(data["patches"]):
         m = p.get("metrics", {})
         s = p.get("stats", {})
@@ -323,7 +412,8 @@ def summary(filepath):
               f"{p.get('n_points', 0):>6} "
               f"{m.get('amplitude_mm', 0):>8.3f} "
               f"{m.get('amplitude_norm', 0):>10.5f} "
-              f"{s.get('rmse_mm', 0):>10.5f}")
+              f"{s.get('rmse_mm', 0):>10.5f} "
+              f"{len(p.get('pit_terms', [])):>4}")
 
     stats = data.get("statistics", {})
     if stats:
