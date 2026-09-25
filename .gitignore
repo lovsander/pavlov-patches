@@ -81,7 +81,7 @@ build-cmake/
 /embedded/uno/build/
 /embedded/build_host/
 
-# C-порт: собранная библиотека для проверки векторов из Python
+# C-пїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ Python
 /c/pappa.dll
 /c/pappa.so
 
@@ -105,3 +105,12 @@ build-cmake/
 # swift/: SwiftPM build directory (not committed; sources are)
 /swift/.build/
 /swift/dbg*
+
+# ==============================================================================
+# r/: R workspace leftovers (sources are committed; nothing here is needed)
+# ==============================================================================
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+Rplots.pdf
