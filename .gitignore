@@ -91,3 +91,6 @@ build-cmake/
 # ==============================================================================
 /java/out/
 *.class
+
+# kotlin/: compiled classes (not committed; sources are)
+/kotlin/out/
