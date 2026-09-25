@@ -52,12 +52,12 @@ import matplotlib.pyplot as plt
 
 from pathlib import Path
 
-from appa.core.outlier_cleaner import build_cleaner
+from pappa.core.outlier_cleaner import build_cleaner
 
-from appa.core.patch_approximator import PatchApproximator
-from appa.analysis.model_scan import build_variant_config, evaluate_variant
-from appa.io.dataset import load_and_clean
-from appa.paths import resolve_path, resolve_plot
+from pappa.core.patch_approximator import PatchApproximator
+from pappa.analysis.model_scan import build_variant_config, evaluate_variant
+from pappa.io.dataset import load_and_clean
+from pappa.paths import resolve_path, resolve_plot
 
 CONFIG = {
     # --- данные ---

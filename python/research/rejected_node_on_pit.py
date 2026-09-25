@@ -48,11 +48,11 @@ import time
 
 import numpy as np
 
-from appa.analysis.layout import (fit_layout, layout_margins,
+from pappa.analysis.layout import (fit_layout, layout_margins,
                                   section_crack_zones, union_zones)
-from appa.core.geometry import node_angles
-from appa.io.dataset import attach_ideal_grid, load_sections
-from appa.paths import resolve_path
+from pappa.core.geometry import node_angles
+from pappa.io.dataset import attach_ideal_grid, load_sections
+from pappa.paths import resolve_path
 
 # конфиг такой же, как в studies/explore_star_layout.py (только нужные ключи)
 cfg = {

@@ -73,14 +73,14 @@ matplotlib.use("Agg")             # только сохранение в фай�
 
 import matplotlib.pyplot as plt
 
-from appa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
+from pappa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
 
-from appa.analysis.layout import section_crack_zones
-from appa.io.dataset import attach_ideal_grid, load_sections, ring_interp
-from appa.paths import resolve_path, resolve_plot
-from appa.analysis.pit_study import fit_variant, measure, pit_crop_info
-from appa.report.pit_report import report_config, report_crops, report_metrics
-from appa.viz.pit_figs import VARIANTS, plot_pit_crops
+from pappa.analysis.layout import section_crack_zones
+from pappa.io.dataset import attach_ideal_grid, load_sections, ring_interp
+from pappa.paths import resolve_path, resolve_plot
+from pappa.analysis.pit_study import fit_variant, measure, pit_crop_info
+from pappa.report.pit_report import report_config, report_crops, report_metrics
+from pappa.viz.pit_figs import VARIANTS, plot_pit_crops
 
 try:                              # чтобы кириллица в консоли не ломалась
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -101,7 +101,7 @@ CONFIG = {
                  "smooth_deg": 2.0, "k": 5.5, "min_zone_deg": 2.0},
 
     # --- параметры гауссовой ямы (оконной) ---
-    # --- параметры фичера ямы: единый источник (appa.core.pit_feature) ---
+    # --- параметры фичера ямы: единый источник (pappa.core.pit_feature) ---
     # решение 2026-09-24: оконный гаусс 3.2σ при общей фазе (CONTEXT §25)
     **PIT_DEFAULTS,
 

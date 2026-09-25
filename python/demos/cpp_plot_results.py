@@ -13,7 +13,7 @@
     расхождения Python и C++ — на нём не видно, числа тонут в картинке.
 
 ЗАМЕНА: studies/verify_port.py (числовая сверка Python <-> C++ по папке объекта,
-текстовая таблица + код возврата) и appa/viz/port_figs.py (широкий рисунок:
+текстовая таблица + код возврата) и pappa/viz/port_figs.py (широкий рисунок:
 сводка по сечениям и 2-3 показательных сечения с панелью Δ). Путь к результатам
 C++ задаётся в CONFIG скрипта проверки (ключ cpp_object_dir) — см. CONTEXT §27.
 """
@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 
-from appa.paths import resolve_plot
+from pappa.paths import resolve_plot
 
 # Автоматически определяем рабочую директорию скрипта
 script_dir = os.path.dirname(os.path.abspath(__file__))

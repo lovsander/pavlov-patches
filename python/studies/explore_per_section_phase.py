@@ -65,14 +65,14 @@ matplotlib.use("Agg")             # только сохранение в фай�
 
 import matplotlib.pyplot as plt
 
-from appa.analysis.layout import fit_layout, layout_margins, section_crack_zones, union_zones, zone_margin_deg
-from appa.core.geometry import node_angles, patch_centers
-from appa.io.dataset import attach_ideal_grid, load_sections
-from appa.paths import resolve_path, resolve_plot
-from appa.analysis.per_section_phase import search_phase, section_margins, section_rmse, shared_rmse_fn
-from appa.report.phase_report import report_compare, report_pits, report_zones
-from appa.viz.phase_figs import plot_phase_fits
-from appa.viz.phase_figs import plot_overview
+from pappa.analysis.layout import fit_layout, layout_margins, section_crack_zones, union_zones, zone_margin_deg
+from pappa.core.geometry import node_angles, patch_centers
+from pappa.io.dataset import attach_ideal_grid, load_sections
+from pappa.paths import resolve_path, resolve_plot
+from pappa.analysis.per_section_phase import search_phase, section_margins, section_rmse, shared_rmse_fn
+from pappa.report.phase_report import report_compare, report_pits, report_zones
+from pappa.viz.phase_figs import plot_phase_fits
+from pappa.viz.phase_figs import plot_overview
 
 try:                              # чтобы кириллица в консоли не ломалась
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")

@@ -1,5 +1,5 @@
 """
-appa.report.fourier_report — текстовый отчёт «Фурье + фичер ям против патчей».
+pappa.report.fourier_report — текстовый отчёт «Фурье + фичер ям против патчей».
 """
 
 VARIANT_ORDER = ["fourier4", "fourier6", "joint", "masked", "poly", "patches"]

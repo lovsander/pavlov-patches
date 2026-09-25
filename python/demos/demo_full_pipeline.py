@@ -23,10 +23,10 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 
-from appa.core.outlier_cleaner import OutlierCleaner
-from appa.core.patch_approximator import PatchApproximator
-from appa.core.crack_detector import CrackDetector
-from appa.paths import resolve_plot
+from pappa.core.outlier_cleaner import OutlierCleaner
+from pappa.core.patch_approximator import PatchApproximator
+from pappa.core.crack_detector import CrackDetector
+from pappa.paths import resolve_plot
 
 # ============ ЗАГРУЗКА ============
 data = pd.read_csv('synthetic_data.csv')

@@ -16,7 +16,7 @@ def model_kwargs(cfg):
     """
     Параметры модели из CONFIG исследования; недостающие берутся из
     MODEL_DEFAULTS (единый источник раскладки — N=7, phase 24.75°, допуски,
-    см. appa/core/pit_feature.py и CONTEXT §27).
+    см. pappa/core/pit_feature.py и CONTEXT §27).
     """
     m = dict(MODEL_DEFAULTS)
     m.update(cfg.get("model", {}))

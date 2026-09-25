@@ -26,17 +26,17 @@ except Exception:
 
 import numpy as np
 
-from appa.analysis.fourier_study import (base_drift, crop_data, dist_to_pits,
+from pappa.analysis.fourier_study import (base_drift, crop_data, dist_to_pits,
                                          fit_fourier_pit, measure, sweep_orders)
-from appa.analysis.layout import section_crack_zones
-from appa.analysis.pit_study import fit_variant
-from appa.analysis.pit_study import measure as measure_patches
-from appa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
-from appa.io.dataset import attach_ideal_grid, load_sections
-from appa.paths import resolve_path, resolve_plot
-from appa.report.fourier_report import (report_config, report_sweep,
+from pappa.analysis.layout import section_crack_zones
+from pappa.analysis.pit_study import fit_variant
+from pappa.analysis.pit_study import measure as measure_patches
+from pappa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
+from pappa.io.dataset import attach_ideal_grid, load_sections
+from pappa.paths import resolve_path, resolve_plot
+from pappa.report.fourier_report import (report_config, report_sweep,
                                         report_table, report_verdict)
-from appa.viz.fourier_figs import plot_fourier_pit, plot_fourier_sweep
+from pappa.viz.fourier_figs import plot_fourier_pit, plot_fourier_sweep
 
 CONFIG = {
     "csv": "synthetic_data.csv",
@@ -53,7 +53,7 @@ CONFIG = {
                  "smooth_deg": 2.0, "k": 5.5, "min_zone_deg": 2.0},
 
     # --- фичер ямы: та же форма и окно, что у патчей ---
-    # --- фичер ямы: единый источник параметров (appa.core.pit_feature) ---
+    # --- фичер ямы: единый источник параметров (pappa.core.pit_feature) ---
     **PIT_DEFAULTS,
 
     # --- модель патчей ---

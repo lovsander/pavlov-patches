@@ -50,13 +50,13 @@ matplotlib.use("Agg")             # только сохранение в фай�
 
 import matplotlib.pyplot as plt
 
-from appa.core.outlier_cleaner import build_cleaner, median_filter_wrap, window_points
+from pappa.core.outlier_cleaner import build_cleaner, median_filter_wrap, window_points
 
-from appa.analysis.zones import defect_maps, detect_zones, indicator_curve, load_crack_table, mask_to_zones, score_zones, truth_zone_mask
-from appa.analysis.defect_study import candidate_results, sweep_thresholds, truth_zones_by_section, window_metrics
-from appa.paths import resolve_path, resolve_plot
-from appa.report.defect_report import report_candidates
-from appa.viz.defect_figs import plot_candidates, plot_indicators, plot_k_sweep, plot_tradeoff, plot_windows
+from pappa.analysis.zones import defect_maps, detect_zones, indicator_curve, load_crack_table, mask_to_zones, score_zones, truth_zone_mask
+from pappa.analysis.defect_study import candidate_results, sweep_thresholds, truth_zones_by_section, window_metrics
+from pappa.paths import resolve_path, resolve_plot
+from pappa.report.defect_report import report_candidates
+from pappa.viz.defect_figs import plot_candidates, plot_indicators, plot_k_sweep, plot_tradeoff, plot_windows
 
 try:                              # чтобы кириллица в консоли не ломалась
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")

@@ -1,4 +1,4 @@
-"""appa.core — ядро модели (патчи, степени, очистка, детектор трещин)."""
+"""pappa.core — ядро модели (патчи, степени, очистка, детектор трещин)."""
 
 from .crack_detector import CrackDetector
 from .geometry import node_angles, patch_centers

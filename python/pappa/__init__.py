@@ -1,10 +1,10 @@
 """
-appa — Adaptive Poly-Patch Approximation (кодовая база «Pavlov patches»).
+pappa — Piecewise Adaptive Poly-Patch Approximation (PAPPA), aka «Pavlov patches».
 
 Карта пакета (подробности — в CONTEXT.md §21):
 
-  appa.paths      корень python/ и resolve_path() — общий для всех скриптов
-  appa.core       ядро модели
+  pappa.paths      корень python/ и resolve_path() — общий для всех скриптов
+  pappa.core       ядро модели
     patch_approximator  PatchApproximator (полиномы на патчах, правило «локтя»)
     outlier_cleaner     OutlierCleaner + AutoOutlierCleaner
     signal_tools        MAD/robust sigma/IQR, круговые фильтры, GMM
@@ -12,15 +12,15 @@ appa — Adaptive Poly-Patch Approximation (кодовая база «Pavlov pat
     pit_feature         фичер ям: оконный гаусс + ЕДИНАЯ сборка модели
                         (MODEL_DEFAULTS, PIT_DEFAULTS, build_model)
     geometry            узлы/центры патчей, круговые операции
-  appa.io         ввод/вывод: model_file (документ .pappa.json: save/load/validate),
+  pappa.io         ввод/вывод: model_file (документ .pappa.json: save/load/validate),
                   sample_store (папка образца: манифест + сечение на файл),
                   dataset (CSV, очистка)
-  appa.analysis   метрики и исследования: zones (детектор трещин), layout (раскладка
+  pappa.analysis   метрики и исследования: zones (детектор трещин), layout (раскладка
                   звездой), per_section_phase, phase_study, defect_study,
                   cleaner_study, pit_study, model_scan
-  appa.viz        рисунки: style, star, layout_figs, phase_figs, pit_figs,
+  pappa.viz        рисунки: style, star, layout_figs, phase_figs, pit_figs,
                   defect_figs, cleaner_figs
-  appa.report     текстовые отчёты в консоль (layout/phase/pit/defect/cleaner)
+  pappa.report     текстовые отчёты в консоль (layout/phase/pit/defect/cleaner)
 
 Точки входа (тонкие скрипты, запускаются напрямую):
   studies/  — исследования (compare_*, explore_*)

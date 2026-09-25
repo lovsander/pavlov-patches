@@ -46,10 +46,10 @@ matplotlib.use("Agg")  # только сохранение в файл, без G
 
 import matplotlib.pyplot as plt
 
-from appa.analysis.model_scan import make_approximator
-from appa.io.dataset import load_and_clean
-from appa.paths import resolve_path, resolve_plot
-from appa.analysis.phase_study import aligned_phase, cyclic_dist, find_pits, outlier_mask, sweep_phase
+from pappa.analysis.model_scan import make_approximator
+from pappa.io.dataset import load_and_clean
+from pappa.paths import resolve_path, resolve_plot
+from pappa.analysis.phase_study import aligned_phase, cyclic_dist, find_pits, outlier_mask, sweep_phase
 
 CONFIG = {
     # --- данные (как в compare_patch_counts.py) ---

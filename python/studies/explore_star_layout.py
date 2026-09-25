@@ -89,21 +89,21 @@ matplotlib.use("Agg")             # только сохранение в фай�
 
 import matplotlib.pyplot as plt
 
-from appa.analysis.layout import (fit_layout, flex_cost_deg, flex_nodes,
+from pappa.analysis.layout import (fit_layout, flex_cost_deg, flex_nodes,
                                   per_section_margins, search_symmetric,
                                   section_crack_zones, sector_rmse, union_zones)
-from appa.analysis.zones import (crack_depths_mm, detect_zones, indicator_curve,
+from pappa.analysis.zones import (crack_depths_mm, detect_zones, indicator_curve,
                                  load_crack_table, mask_to_zones, truth_zone_mask)
-from appa.core.geometry import node_angles, patch_centers
-from appa.core.outlier_cleaner import build_cleaner
-from appa.core.patch_approximator import PatchApproximator
-from appa.io.dataset import attach_ideal_grid, load_sections
-from appa.paths import resolve_path, resolve_plot
-from appa.report.layout_report import report_chosen, report_overlay, report_rows
-from appa.viz.layout_figs import (overlay_curves, plot_layout_fits,
+from pappa.core.geometry import node_angles, patch_centers
+from pappa.core.outlier_cleaner import build_cleaner
+from pappa.core.patch_approximator import PatchApproximator
+from pappa.io.dataset import attach_ideal_grid, load_sections
+from pappa.paths import resolve_path, resolve_plot
+from pappa.report.layout_report import report_chosen, report_overlay, report_rows
+from pappa.viz.layout_figs import (overlay_curves, plot_layout_fits,
                                   plot_layout_report, plot_patches,
                                   plot_variants)
-from appa.viz.star import STAR_INNER_R, STAR_TOP_R, draw_star
+from pappa.viz.star import STAR_INNER_R, STAR_TOP_R, draw_star
 
 try:                              # чтобы кириллица в консоли не ломалась
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")

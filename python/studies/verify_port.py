@@ -39,10 +39,10 @@ except Exception:
 import numpy as np
 import pandas as pd
 
-from appa.io.dataset import ring_interp
-from appa.io.sample_store import load_sample, save_report
-from appa.paths import REPO_ROOT, SAMPLES_DIR, resolve_path
-from appa.report.sample_report import print_verify
+from pappa.io.dataset import ring_interp
+from pappa.io.sample_store import load_sample, save_report
+from pappa.paths import REPO_ROOT, SAMPLES_DIR, resolve_path
+from pappa.report.sample_report import print_verify
 
 CONFIG = {
     # образец, собранный Python-ом, и папка, куда пишет порт C++

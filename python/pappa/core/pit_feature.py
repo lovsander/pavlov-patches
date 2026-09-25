@@ -1,9 +1,9 @@
 # вырезано из _src_pit_feature.py (рефакторинг, см. CONTEXT.md §21)
-"""appa.core.pit_feature — ПРОТОТИП: оконный гаусс (яма) в базисе патча.
+"""pappa.core.pit_feature — ПРОТОТИП: оконный гаусс (яма) в базисе патча.
 
 Форма ямы вынесена в модульную функцию pit_shape_deg(): её использует и класс
 PitPatchApproximator (в нормированных координатах патча), и «Фурье + фичер ям»
-(appa.analysis.fourier_study) — одна форма, один набор параметров.
+(pappa.analysis.fourier_study) — одна форма, один набор параметров.
 """
 
 import time

@@ -1,5 +1,5 @@
 """
-appa.report.pit_window_report — таблицы «окно фичера vs фаза» для решения.
+pappa.report.pit_window_report — таблицы «окно фичера vs фаза» для решения.
 """
 
 """нужен numpy для средних в отчёте"""

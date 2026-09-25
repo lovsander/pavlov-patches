@@ -56,13 +56,13 @@ import matplotlib.pyplot as plt
 
 from pathlib import Path
 
-from appa.core.outlier_cleaner import AutoOutlierCleaner, build_cleaner
+from pappa.core.outlier_cleaner import AutoOutlierCleaner, build_cleaner
 
-from appa.core.patch_approximator import PatchApproximator
-from appa.analysis.cleaner_study import evaluate_method, fmt, hampel_window_sweep, make_ctx, mean_or_none
-from appa.paths import resolve_path, resolve_plot
-from appa.report.cleaner_report import print_section_report, print_summary
-from appa.viz.cleaner_figs import plot_cleaner_report
+from pappa.core.patch_approximator import PatchApproximator
+from pappa.analysis.cleaner_study import evaluate_method, fmt, hampel_window_sweep, make_ctx, mean_or_none
+from pappa.paths import resolve_path, resolve_plot
+from pappa.report.cleaner_report import print_section_report, print_summary
+from pappa.viz.cleaner_figs import plot_cleaner_report
 
 CONFIG = {
     "csv": "synthetic_data.csv",

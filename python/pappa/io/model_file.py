@@ -1,12 +1,13 @@
 """
-appa/io/model_file.py
+pappa/io/model_file.py
 
 Сериализация модели (PatchApproximator / PitPatchApproximator) в документ
 описания сечения — формат .pappa.json (v2.0).
 
-ИМЯ: pappa = Pavlov + APPA (Adaptive Poly-Patch Approximation, aka «Pavlov
-patches»). История имён (CONTEXT §27): pmodel -> appa -> pappa; документы
-предшественников ЧИТАЮТСЯ через слой совместимости в load_model/validate_model.
+ИМЯ: pappa = Piecewise Adaptive Poly-Patch Approximation (PAPPA), aka «Pavlov
+patches». История имён (CONTEXT §27): pmodel -> appa -> pappa (акроним
+APPA -> PAPPA); документы предшественников ЧИТАЮТСЯ слоем совместимости в
+load_model/validate_model.
 """
 
 import json
@@ -20,13 +21,13 @@ FORMAT_NAME = "pappa"
 FORMAT_VERSION = "2.0"
 
 # форматы-предшественники (до переименования): читаем, но не пишем.
-# pmodel v1.0 — файлы до канона [-1,1] (коэффициенты в сырых градусах);
-# appa v2.0 — промежуточное имя того же формата, что и pappa.
+# pmodel v1.0 — документы до канона [-1,1] (коэффициенты в сырых градусах);
+# appa v2.0  — промежуточное имя того же формата, что и pappa.
 LEGACY_FORMATS = (("pmodel", "1.0"), ("appa", "2.0"))
 
 
-def _appa_version():
-    """Версия пакета appa — в документе видно, чем он записан (без цикла импортов)."""
+def _pappa_version():
+    """Версия пакета pappa — в документе видно, чем он записан (без цикла импортов)."""
     from .. import __version__
     return str(__version__)
 
@@ -35,7 +36,7 @@ def _appa_version():
 
 def save_model(approx, filepath, meta=None):
     """
-    Сохранить обученную модель в документ .appa.json.
+    Сохранить обученную модель в документ .pappa.json.
 
     approx : PatchApproximator / PitPatchApproximator (уже fitted)
     filepath : путь к файлу
@@ -53,7 +54,7 @@ def save_model(approx, filepath, meta=None):
         "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "software": {
             "language": "python",
-            "appa_version": _appa_version(),
+            "pappa_version": _pappa_version(),
         },
         "meta": {
             "section_id": meta.get("section_id", 0),
@@ -126,7 +127,7 @@ def save_model(approx, filepath, meta=None):
 
 def load_model(filepath):
     """
-    Загрузить модель из документа .appa.json (или старого .pmodel.json v1.0).
+    Загрузить модель из документа .pappa.json (или старого .pmodel.json v1.0).
     Возвращает модель (fitted), готовую к eval().
     """
     from ..core.patch_approximator import PatchApproximator
@@ -136,7 +137,7 @@ def load_model(filepath):
         data = json.load(f)
 
     # Проверка формата. Документы-предшественники (pmodel v1.0 и промежуточный
-    # appa v2.0) читаются: структура та же, отличается имя/версия (а в pmodel
+    # pappa v2.0) читаются: структура та же, отличается имя/версия (а в pmodel
     # v1.0, как правило, нет coord_mode -> коэффициенты в сырых градусах).
     fmt = str(data.get("format", ""))
     ver = str(data.get("version", ""))

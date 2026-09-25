@@ -2,10 +2,10 @@
   "format": "pappa",
   "version": "2.0",
   "method": "PatchApproximator",
-  "created": "2026-09-25T12:01:32Z",
+  "created": "2026-09-25T12:23:49Z",
   "software": {
     "language": "python",
-    "appa_version": "0.3.0"
+    "pappa_version": "0.3.0"
   },
   "meta": {
     "section_id": 0,
@@ -272,7 +272,7 @@
   "statistics": {
     "n_points_total": 5999,
     "n_outliers_removed": 1,
-    "fit_time_ms": 68.23650002479553,
+    "fit_time_ms": 41.20139998849481,
     "rmse_global_mm": 0.044836907954299024
   }
 }

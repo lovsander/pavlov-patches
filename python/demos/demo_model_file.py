@@ -16,8 +16,8 @@ except Exception:
 import numpy as np
 import pandas as pd
 
-from appa.core.patch_approximator import PatchApproximator
-from appa.io.model_file import load_model, save_model, summary, validate_model
+from pappa.core.patch_approximator import PatchApproximator
+from pappa.io.model_file import load_model, save_model, summary, validate_model
 
 # ============ Загрузка и очистка ============
 data = pd.read_csv('synthetic_data.csv')

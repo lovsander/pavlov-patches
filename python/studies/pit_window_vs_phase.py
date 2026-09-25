@@ -31,17 +31,17 @@ except Exception:
 
 import numpy as np
 
-from appa.analysis.layout import section_crack_zones
-from appa.analysis.pit_study import fit_variant
-from appa.analysis.pit_study import measure as measure_patches
-from appa.analysis.pit_window_study import (best_phase_for_pits, geometry_rows,
+from pappa.analysis.layout import section_crack_zones
+from pappa.analysis.pit_study import fit_variant
+from pappa.analysis.pit_study import measure as measure_patches
+from pappa.analysis.pit_window_study import (best_phase_for_pits, geometry_rows,
                                             overlap_stats, seam_contribution)
-from appa.core.geometry import node_angles
-from appa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
-from appa.io.dataset import attach_ideal_grid, load_sections, ring_interp
-from appa.paths import resolve_path, resolve_plot
-from appa.report.pit_window_report import report_fits, report_geometry
-from appa.viz.pit_window_figs import plot_window_fits, plot_window_geometry
+from pappa.core.geometry import node_angles
+from pappa.core.pit_feature import PIT_DEFAULTS, validate_pit_cfg
+from pappa.io.dataset import attach_ideal_grid, load_sections, ring_interp
+from pappa.paths import resolve_path, resolve_plot
+from pappa.report.pit_window_report import report_fits, report_geometry
+from pappa.viz.pit_window_figs import plot_window_fits, plot_window_geometry
 
 CONFIG = {
     "csv": "synthetic_data.csv",
@@ -52,7 +52,7 @@ CONFIG = {
     # --- прежний вид ---
     "n_patches": 7,
     "phase_deg": 24.75,
-    # --- фичер ямы: единый источник параметров (appa.core.pit_feature) ---
+    # --- фичер ямы: единый источник параметров (pappa.core.pit_feature) ---
     # «прежний вид» = PIT_DEFAULTS (окно 3.2σ); решение 2026-09-24 (CONTEXT §25)
     **PIT_DEFAULTS,
 

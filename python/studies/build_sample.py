@@ -10,7 +10,7 @@ build_sample.py
      фичер ям включён;
   3. обучает модель сечения через ЕДИНУЮ точку сборки build_model
      (MODEL_DEFAULTS + PIT_DEFAULTS: N=7, phase 24.75°, оконный гаусс 3.2σ);
-  4. пишет документы сечений и манифест через appa.io.sample_store.
+  4. пишет документы сечений и манифест через pappa.io.sample_store.
 
 Зачем: это питоновская половина контракта «папка образца» (CONTEXT §27).
 Порт C++ обязан записать такую же папку; после этого
@@ -32,14 +32,14 @@ except Exception:
 
 import numpy as np
 
-from appa.analysis.layout import section_crack_zones
-from appa.core.pit_feature import (DETECTOR_DEFAULTS, MODEL_DEFAULTS,
+from pappa.analysis.layout import section_crack_zones
+from pappa.core.pit_feature import (DETECTOR_DEFAULTS, MODEL_DEFAULTS,
                                    PIT_DEFAULTS, build_model)
-from appa.io.dataset import load_sections, ring_interp
-from appa.io.model_file import validate_model
-from appa.io.sample_store import load_sample, sample_dir, save_sample
-from appa.paths import resolve_path
-from appa.report.sample_report import print_built_sample
+from pappa.io.dataset import load_sections, ring_interp
+from pappa.io.model_file import validate_model
+from pappa.io.sample_store import load_sample, sample_dir, save_sample
+from pappa.paths import resolve_path
+from pappa.report.sample_report import print_built_sample
 
 STYLE = {"bar": "=" * 96}
 

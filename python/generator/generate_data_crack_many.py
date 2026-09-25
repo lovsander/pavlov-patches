@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 
-from appa.paths import resolve_plot
+from pappa.paths import resolve_plot
 
 # ============ ПАРАМЕТРЫ ============
 N_POINTS_PER_SECTION = 6000   # точек на одно сечение (на оборот)

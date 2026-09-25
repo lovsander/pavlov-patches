@@ -1,5 +1,5 @@
 # вырезано из _src_star_layout.py (рефакторинг, см. CONTEXT.md §21)
-"""appa.core.geometry — углы узлов/центров патчей и круговые операции."""
+"""pappa.core.geometry — углы узлов/центров патчей и круговые операции."""
 
 import numpy as np
 

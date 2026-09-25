@@ -1,6 +1,6 @@
 # вырезано из _src_pit_feature.py / _src_star_layout.py (рефакторинг, CONTEXT.md §21)
 """
-appa.report.sample_report — текстовые отчёты по папке образца.
+pappa.report.sample_report — текстовые отчёты по папке образца.
 
 Печать в консоль по правилу слоёв (§21): считает io/analysis, рисует viz,
 печатает report. Здесь — всё, что видит человек при сборке и проверке образца.
