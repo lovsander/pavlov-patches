@@ -1,0 +1,11 @@
+{
+  "name": "pappa-js",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PAPPA (Piecewise Adaptive Poly-Patch Approximation) на JavaScript — порт метода, проверяется конформанс-векторами и verify_port",
+  "scripts": {
+    "vectors": "node cmd/conformance.js ..",
+    "test": "node --test"
+  }
+}
