@@ -61,6 +61,9 @@ python studies/build_sample.py                # -> samples/<name>/{sample.json, 
 
 # 3) numeric check of the port against the reference (exit code 0/1/2)
 python studies/verify_port.py --cpp-dir samples/<name>_cpp
+
+# 4) optional: one wide figure (profile, residual to ideal, parity per section)
+python studies/verify_port_figure.py --cpp-dir samples/<name>_cpp   # -> python/plots/
 ```
 
 ## Repository layout

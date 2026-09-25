@@ -33,6 +33,14 @@ ctest --preset msvc-release          # тест port_parity_python, см. cpp/pa
 скрипт сам проверит наличие numpy и возьмёт окружение проекта; явно задать
 интерпретатор можно так: `cmake --preset msvc-release -DPython3_EXECUTABLE=<путь>`.
 
+Широкий рисунок сверки (профиль, остаток к эталону, паритет по сечениям, крупные
+планы 3 ям) — отдельным скриптом, после того как числа сошлись):
+
+```bash
+python python/studies/verify_port_figure.py --py-dir samples/ref --cpp-dir samples/body_cpp
+# -> python/plots/port_check.png (3520 x 1600 px)
+```
+
 Вручную то же самое:
 
 ```bash
