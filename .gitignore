@@ -101,3 +101,7 @@ build-cmake/
 # pascal/: compiled binaries and units (not committed; sources are)
 /pascal/bin/
 /pascal/lib/
+
+# swift/: SwiftPM build directory (not committed; sources are)
+/swift/.build/
+/swift/dbg*

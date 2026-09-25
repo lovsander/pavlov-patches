@@ -80,6 +80,7 @@ python studies/verify_port_figure.py --cpp-dir samples/<name>_cpp   # -> python/
 | `kotlin/` | Kotlin port (uses the `kotlinc` bundled with Android Studio): vectors + pipeline + `pappa.SelfTest` |
 | `rust/` | Rust port (cargo, **no crates**, offline build): vectors + pipeline + `cargo test` |
 | `pascal/` | Free Pascal port (FPC 3.2, no units beyond RTL): vectors + pipeline + `selftest` |
+| `swift/` | Swift port (SwiftPM, no packages; needs `SDKROOT` on Windows): vectors + pipeline + `swift test` |
 | `docs/` | Method description, presentation assets, embedded (MCU) feasibility study |
 | `spec/` | Model document schema + conformance vectors |
 
