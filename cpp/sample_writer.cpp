@@ -66,7 +66,11 @@ void write_patches(JsonWriter& w, const PatchApproximator& m) {
         w.kv("correlation", p.correlation);
         w.end_object();
 
-        if (!p.pit_offsets_deg.empty()) {
+        // Термины фичера ям пишем ВСЕГДА, когда модель с ямами — включая пустой
+        // список у патчей, которые ям не видят: Python-загрузчик ожидает ключ у
+        // каждого патча (ровно так же пишет python-референс). Отсутствие ключа
+        // роняло eval() — этот баг нашла сверка порта (verify_port).
+        if (m.has_pits()) {
             w.key("pit_terms");
             w.begin_array();
             for (size_t j = 0; j < p.pit_offsets_deg.size(); ++j) {

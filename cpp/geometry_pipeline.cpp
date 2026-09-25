@@ -6,6 +6,8 @@
 #include <iostream>
 #include <map>
 
+#include "pit_detector.h"
+
 namespace pappa {
 
 std::vector<SectionModel> GeometryPipeline::process(
@@ -14,10 +16,6 @@ std::vector<SectionModel> GeometryPipeline::process(
     const size_t n = section_ids.size();
     if (heights.size() != n || angles.size() != n || radii.size() != n) {
         throw std::invalid_argument("process: размеры массивов не совпадают");
-    }
-    if (opt_.pits) {
-        throw std::runtime_error(
-            "фичер ям в порту ещё не реализован (шаг 4b): запустите с --no-pits");
     }
 
     // Группировка по сечению
@@ -63,6 +61,25 @@ std::vector<SectionModel> GeometryPipeline::process(
                                 opt_.amplitude_scale, opt_.overlap_train,
                                 opt_.overlap_use, opt_.phase_deg,
                                 opt_.deg_elbow_tol, "normalized");
+
+        // Фичер ям: центры берём из детектора (band) по ОЧИЩЕННЫМ точкам —
+        // ровно как section_crack_zones в Python (layout.py).
+        std::vector<double> pits;
+        if (opt_.pits) {
+            PitDetectorOptions det;
+            det.baseline_deg = opt_.detector_window_deg;
+            det.wide_deg = opt_.detector_wide_deg;
+            det.smooth_deg = opt_.detector_smooth_deg;
+            det.k = opt_.detector_k;
+            det.min_zone_deg = opt_.detector_min_zone_deg;
+            const PitDetector detector(det);
+            pits = detector.pits(a_clean, r_clean);
+            model.set_pit_shape(opt_.sigma_deg, opt_.pit_core_sigma,
+                                opt_.pit_window_sigma, opt_.pit_min_amp,
+                                opt_.tapering);
+            model.set_pits(pits);
+        }
+
         model.fit(a_clean, r_clean);
         section.fit_time_ms =
             std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0)
@@ -74,7 +91,7 @@ std::vector<SectionModel> GeometryPipeline::process(
                       << " мм): точек " << section.n_points_total
                       << ", выброшено " << section.n_outliers
                       << ", окно очистки " << cleaner.info().baseline_window_points
-                      << " точек, степени [";
+                      << " точек, ям найдено " << pits.size() << ", степени [";
             const std::vector<int> degs = section.model.get_degrees();
             for (size_t k = 0; k < degs.size(); ++k) {
                 std::cout << degs[k] << (k + 1 == degs.size() ? "" : ", ");

@@ -141,7 +141,7 @@ void print_usage() {
         "  --baseline-deg X      окно снятия формы, ° (1.0)\n"
         "  --iqr-k X             множитель IQR, усы Тьюки (3.0)\n"
         "Фичер ям (шаг 4b):\n"
-        "  --pits / --no-pits    включить/выключить (в 4a по умолчанию ВЫКЛ)\n"
+        "  --pits / --no-pits    фичер ям: включён по умолчанию (как в референсе)\n"
         "Прочее:\n"
         "  --self-check          напечатать RMSE модели и (если есть) к эталону\n"
         "  --dump-points FILE    выгрузить значения модели по сетке 0.06°\n"
@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
     std::string input, out_dir, name, dump_points;
     bool self_check = false, pause = false, verbose = true;
     pappa::PipelineOptions opt;
-    opt.pits = false;                  // 4a: фичер ям выключен (включается в 4b)
+    opt.pits = true;                   // штатный режим как в Python: фичер ям ВКЛ
 
     auto need_value = [&](int& i, const std::string& flag) -> std::string {
         if (i + 1 >= argc) throw std::runtime_error("для " + flag + " нужно значение");

@@ -216,6 +216,12 @@ def load_model(filepath):
                                              for t in p["pit_terms"]])
             patch["pit_coefs"] = np.array([float(t["amp"])
                                            for t in p["pit_terms"]])
+        elif pit:
+            # Модель с фичером, но у патча терминов нет: ключи всё равно нужны,
+            # иначе eval() упадёт. Порт обязан писать пустой список (и пишет),
+            # но загрузчик не должен зависеть от полноты писателя.
+            patch["pit_offsets"] = np.array([], dtype=float)
+            patch["pit_coefs"] = np.array([], dtype=float)
         approx.patches_.append(patch)
         approx.degrees_.append(patch["degree"])
 

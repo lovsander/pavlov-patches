@@ -22,6 +22,7 @@ $sources = @(
     "signal_tools.cpp",
     "auto_outlier_cleaner.cpp",
     "patch_approximator.cpp",
+    "pit_detector.cpp",
     "geometry_pipeline.cpp",
     "json_writer.cpp",
     "sample_writer.cpp"
