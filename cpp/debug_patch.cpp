@@ -1,3 +1,6 @@
+// Отладочная утилита (не входит в сборку пайплайна, см. cpp/CMakeLists.txt).
+// Собрана под старый API PatchApproximator; актуальная точка входа — main.cpp.
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
