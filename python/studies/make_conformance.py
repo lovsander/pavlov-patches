@@ -156,12 +156,21 @@ def build_vectors():
     radii_plain = profile(angles, with_pits=False, ripple=0.004)
     radii_pits = profile(angles, with_pits=True)
     pits_known = [90.0, 210.0]                          # центры, видимые детектору
-    # Шумовая подложка: высокочастотная часть даёт разницу узкой/широкой медиан
-    # (band детектора), низкочастотная — ненулевой масштаб остатка у очистителя.
+    # Шумовая подложка для ДЕТЕКТОРА: высокочастотная часть (47°) даёт разницу
+    # узкой/широкой медиан, низкочастотная (13°) — ненулевой масштаб остатка.
     noise = (0.03 * np.sin(np.deg2rad(47.0 * angles))
              + 0.02 * np.sin(np.deg2rad(13.0 * angles)))
     radii_pits = radii_pits + noise
-    radii_plain = radii_plain + noise
+
+    # ОЧИСТКА: нужен измеримый шум (медиана по узкому окну снимает и рябь, и
+    # сглаженные компоненты, поэтому на идеально гладких данных остаток вырожден:
+    # IQR ~ 0, и порог Тьюки упирается в защиту denom = 1.0 мм -> очиститель
+    # ничего не помечает). Плюс окно снятия формы должно быть шире: при шаге 1°
+    # baseline_deg = 1.0 — это всего 3 точки, статистика остатка нестабильна.
+    # Берём baseline_deg = 5.0 (5 точек) и детерминированный шум sigma = 0.02 мм.
+    rng = np.random.default_rng(0)
+    radii_spiky = radii_plain + rng.normal(0.0, 0.02, size=angles.size)
+    radii_spiky[np.arange(5, len(radii_spiky), 97)] += 0.9
 
     # очистка: тот же профиль + шумовая подложка + детерминированные всплески.
     # Подложка нужна, чтобы у остатка после медианного фильтра был НЕНУЛЕВОЙ
@@ -177,7 +186,8 @@ def build_vectors():
         vector_model("model_patches_only", angles, radii_plain, pits=None),
         vector_model("model_with_pits", angles, radii_pits, pits=pits_known),
         vector_detector("detector_band_two_pits", angles, radii_pits),
-        vector_cleaner("cleaner_iqr_spikes", angles, radii_spiky),
+        vector_cleaner("cleaner_iqr_spikes", angles, radii_spiky,
+                       cfg={"baseline_deg": 10.0, "iqr_k": 3.0}),
     ]
     return vectors
 
