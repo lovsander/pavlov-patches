@@ -1,0 +1,49 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "msvc-release",
+      "displayName": "MSVC x64 Release (Visual Studio)",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build-cmake/msvc-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PAPPA_WARNINGS": "ON"
+      }
+    },
+    {
+      "name": "msvc-debug",
+      "displayName": "MSVC x64 Debug (Visual Studio)",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build-cmake/msvc-debug",
+      "cacheVariables": { "PAPPA_WARNINGS": "ON" }
+    },
+    {
+      "name": "gcc-release",
+      "displayName": "g++ Release (MSYS2 MinGW, needs make/ninja)",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build-cmake/gcc-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "C:/msys64/mingw64/bin/g++.exe",
+        "PAPPA_WARNINGS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "msvc-release", "configurePreset": "msvc-release", "configuration": "Release" },
+    { "name": "msvc-debug", "configurePreset": "msvc-debug", "configuration": "Debug" },
+    { "name": "gcc-release", "configurePreset": "gcc-release" }
+  ],
+  "testPresets": [
+    {
+      "name": "msvc-release",
+      "configurePreset": "msvc-release",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}

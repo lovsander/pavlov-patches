@@ -15,8 +15,40 @@ add_executable(pappa_pipeline
     signal_tools.cpp
     auto_outlier_cleaner.cpp
     patch_approximator.cpp
+    pit_detector.cpp
     geometry_pipeline.cpp
     json_writer.cpp
     sample_writer.cpp
 )
+
+# --- предупреждения компилятора (для обоих компиляторов, которые мы собираем:
+#     MSVC в VS Code/CMake и g++ из msys64) ---
+option(PAPPA_WARNINGS "Включить предупреждения компилятора" ON)
+if (PAPPA_WARNINGS)
+    if (MSVC)
+        target_compile_options(pappa_pipeline PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(pappa_pipeline PRIVATE -Wall -Wextra)
+    endif()
+endif()
+
+# --- проверка паритета порта с референсом Python как тест CTest ---
+# Запуск: cmake --build --preset msvc-release && ctest --preset msvc-release
+# Тест собирает две папки образца (Python и порт) и сравнивает их числами;
+# пропускается, если Python не найден.
+option(PAPPA_ENABLE_PARITY_TEST "Зарегистрировать ctest-проверку паритета" ON)
+if (PAPPA_ENABLE_PARITY_TEST)
+    enable_testing()
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if (Python3_Interpreter_FOUND)
+        add_test(NAME port_parity_python
+                 COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+                         -File "${CMAKE_CURRENT_SOURCE_DIR}/parity_check.ps1"
+                         -Exe "$<TARGET_FILE:pappa_pipeline>"
+                         -Python "${Python3_EXECUTABLE}")
+    else()
+        message(STATUS "Python не найден: ctest-проверка паритета не зарегистрирована")
+    endif()
+endif()
+
 

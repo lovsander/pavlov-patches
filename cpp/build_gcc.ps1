@@ -1,13 +1,11 @@
 # PAPPA port build without CMake - using g++ (msys64/mingw64).
 #
-# Why: CMake is not installed on this machine, but the port must be built and
-# CHECKED (CONTEXT §27: the port is done when its sample folder matches the
-# Python reference per studies/verify_port.py). This script does what
-# CMakeLists.txt does: builds pappa_pipeline from the same sources.
+# Why: a fallback when CMake (or make) is not installed, but the port must be
+# built and CHECKED (CONTEXT §27). The canonical build is CMake - see
+# cpp/README.md and cpp/CMakePresets.json; this script does the same compile.
 #
 # Usage: powershell -File cpp/build_gcc.ps1
 #        powershell -File cpp/build_gcc.ps1 -Debug
-
 param(
     [switch]$Debug,
     [string]$Gxx = "C:\msys64\mingw64\bin\g++.exe"
