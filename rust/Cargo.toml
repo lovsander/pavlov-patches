@@ -1,0 +1,20 @@
+[package]
+name = "pappa"
+version = "0.1.0"
+edition = "2021"
+description = "PAPPA (Piecewise Adaptive Poly-Patch Approximation) — порт референса Python на Rust"
+license = "MIT"
+
+# Зависимостей НЕТ (JSON, CSV и статистика — свои): сборка идёт офлайн.
+[dependencies]
+
+[[bin]]
+name = "conformance"
+path = "src/bin/conformance.rs"
+
+[[bin]]
+name = "pappa"
+path = "src/bin/pappa.rs"
+
+[profile.release]
+opt-level = 3

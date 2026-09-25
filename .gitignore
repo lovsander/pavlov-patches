@@ -94,3 +94,6 @@ build-cmake/
 
 # kotlin/: compiled classes (not committed; sources are)
 /kotlin/out/
+
+# rust/: compiled binaries (not committed; sources are)
+/rust/target/
