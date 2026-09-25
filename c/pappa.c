@@ -652,6 +652,56 @@ void pp_model_fit(pp_model *m, const double *angles, const double *radii, int n)
         }
         for (int k = 0; k <= deg; ++k) patch->coefs[k] = pcoef[k];
         for (int k = deg + 1; k <= PP_MAX_DEG; ++k) patch->coefs[k] = 0.0;
+
+        // --- метрики и статистика (нужны документу и валидатору Python)
+        static double scr2[PP_MAX_POINTS], secv[PP_MAX_POINTS], fv[PP_MAX_WINDOW];
+        double sse = 0.0, sae = 0.0, mx = 0.0;
+        for (int i = 0; i < cnt; ++i) {
+            double v = pp_polyval(patch->coefs, deg + 1, xs[i]);
+            for (int j = 0; j < nkeep; ++j) {
+                const double dd = fabs(xs[i] - keep_off[j] / half_train) * half_train;
+                v += keep_amp[j] * pp_pit_shape_deg(m, dd);
+            }
+            fv[i] = v;
+            const double e = v - ys[i];
+            sse += e * e;
+            sae += fabs(e);
+            if (fabs(e) > mx) mx = fabs(e);
+        }
+        const double npt = (double)cnt;
+        patch->rmse_mm = sqrt(sse / npt);
+        patch->mae_mm = sae / npt;
+        patch->max_err_mm = mx;
+
+        int ns = 0;
+        for (int i = 0; i < n; ++i)
+            if (pp_circ_dist(angles[i], c) <= half_sector && ns < PP_MAX_POINTS)
+                secv[ns++] = radii[i];
+        double amp = 0.0, mean_sec = 0.0;
+        if (ns >= 5) {
+            amp = pp_percentile_linear(secv, ns, 95.0, scr2) -
+                  pp_percentile_linear(secv, ns, 5.0, scr2);
+            double sum = 0.0;
+            for (int i = 0; i < ns; ++i) sum += secv[i];
+            mean_sec = sum / (double)ns;
+        }
+        patch->amplitude_mm = amp;
+        patch->mean_radius_mm = mean_sec;
+        patch->amplitude_norm = (mean_sec > 0.0) ? amp / mean_sec : 0.0;
+
+        double corr = 0.0, mf = 0.0, my = 0.0;
+        for (int i = 0; i < cnt; ++i) { mf += fv[i]; my += ys[i]; }
+        mf /= npt;
+        my /= npt;
+        double cov = 0.0, vf = 0.0, vy = 0.0;
+        for (int i = 0; i < cnt; ++i) {
+            const double df = fv[i] - mf, dy = ys[i] - my;
+            cov += df * dy;
+            vf += df * df;
+            vy += dy * dy;
+        }
+        if (vf > 0.0 && vy > 0.0) corr = cov / sqrt(vf * vy);
+        patch->correlation = corr;
     }
     m->is_fitted = 1;
 }

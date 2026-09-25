@@ -17,13 +17,30 @@
 
 #include <stddef.h>
 
+// Ёмкости массивов (переопределяются при сборке: -DPP_MAX_POINTS=...).
+// Значения по умолчанию рассчитаны на встроенные цели; для хоста их поднимают
+// (см. c/build_gcc.ps1: -DPP_MAX_POINTS=8192 для сечений по 6000 точек).
+#ifndef PP_MAX_POINTS
 #define PP_MAX_POINTS  4096
+#endif
+#ifndef PP_MAX_WINDOW
 #define PP_MAX_WINDOW  1024      // точек в обучающем окне патча (хватает с запасом)
+#endif
+#ifndef PP_MAX_EXT
 #define PP_MAX_EXT     (3 * PP_MAX_POINTS)   // кольцо, развёрнутое на ±360°
+#endif
+#ifndef PP_MAX_PATCHES
 #define PP_MAX_PATCHES 32
+#endif
+#ifndef PP_MAX_DEG
 #define PP_MAX_DEG     20
+#endif
+#ifndef PP_MAX_PITS
 #define PP_MAX_PITS    16
+#endif
+#ifndef PP_MAX_ZONES
 #define PP_MAX_ZONES   64
+#endif
 
 // ------------------------------------------------------------------ модель
 typedef struct {
