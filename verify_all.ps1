@@ -288,6 +288,16 @@ $ports = @(
         Sample = 'synthetic_sphere_vba'
         Note = 'needs Excel 2016+ and a one-time AccessVBOM; every run goes through a job with a timeout'
     }
+    @{
+        Name = 'fsharp'; Title = 'F# (.NET 10, zero NuGet packages; SelfTest = vectors + smoke + round-trip)'
+        Tool = @('dotnet', (Join-Path $env:ProgramFiles 'dotnet\dotnet.exe'))
+        Build = (New-PsStep 'fsharp/build_fsharp.ps1' @())
+        Vectors = (New-PsStep 'fsharp/build_fsharp.ps1' @('-Vectors'))
+        Tests = (New-PsStep 'fsharp/build_fsharp.ps1' @('-Test'))
+        Pipeline = (New-Step '.' @('fsharp/bin/Release/net10.0/pappa.exe', 'pipeline', '--input', 'python/synthetic_data.csv', '--out-dir', 'samples/synthetic_sphere_fsharp', '--name', 'synthetic_sphere', '--quiet'))
+        Sample = 'synthetic_sphere_fsharp'
+        Note = 'one exe, three subcommands like csharp; POSIX twin: bash fsharp/build_fsharp.sh --vectors (no PowerShell)'
+    }
 
 )
 

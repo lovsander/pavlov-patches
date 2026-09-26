@@ -29,9 +29,9 @@ coefficients per section — so the same model is evaluable in any language.
   корректность любого языка проверяется одними и теми же векторами
   (`spec/conformance/`) и числовой сверкой с референсом.
 
-**15 языковых реализаций** одного метода (плюс референс на Python): C++17, C99,
-Go, JavaScript, Java, Kotlin, Rust, C# (.NET), Free Pascal, Fortran 2018, Swift,
-Julia, R, GNU Octave, VBA 7 (Microsoft Excel). Каждая —
+**16 языковых реализаций** одного метода (плюс референс на Python): C++17, C99,
+Go, JavaScript, Java, Kotlin, Rust, C# (.NET), F# (.NET), Free Pascal, Fortran 2018,
+Swift, Julia, R, GNU Octave, VBA 7 (Microsoft Excel). Каждая —
 полный пайплайн «CSV → папка образца», свои ворота (векторы + тесты) и запись
 документов по общему контракту.
 
@@ -101,7 +101,7 @@ powershell -File verify_all.ps1 -Only r,julia
 ```
 
 Порт без установленного тулчейна помечается `SKIP` с причиной и не считается
-провалом: репозиторий должен читаться и на машине с 2–3 тулчейнами из 17 строк
+провалом: репозиторий должен читаться и на машине с 2–3 тулчейнами из 18 строк
 таблицы ниже.
 
 Результат на машине разработчика (Windows, 2026-09-25: доступны все тулчейны,
@@ -123,9 +123,10 @@ powershell -File verify_all.ps1 -Only r,julia
 | `julia/` | `bin/conformance.jl` | `test/runtests.jl` | 10/10, 1.34e-12 |
 | `r/` | `bin/conformance.R` | `tests/runtests.R` | 10/10, 1.36e-12 |
 | `csharp/` | `pappa.exe conformance` (.NET 10, 0 пакетов NuGet) | `pappa.exe selftest` (векторы + дымовой фит + round-trip документа) | 10/10, 1.34e-12 |
+| `fsharp/` | `pappa conformance` (.NET 10 / F# 10, 0 пакетов NuGet; без PowerShell — `bash fsharp/build_fsharp.sh --vectors`) | `pappa selftest` (векторы + дымовой фит + round-trip документа) | 10/10, 1.34e-12 |
 | `octave/` | `bin/conformance.m` (Octave 11, только ядро: свой JSON/CSV/статистика) | `bin/selftest.m` (векторы + дымовой фит + round-trip документа) | 10/10, 1.34e-12 |
 | `vba/` | `powershell -File vba/build_vba.ps1 -Vectors` (Excel 16 / VBA 7 через COM: модули импортируются в книгу) | `-Test` → `PappaSelftest` (49 проверок: векторы + юниты + дымовой фит + round-trip документа) | 10/10, 1.37e-12 |
-| `spec/` | `python spec/check_schema.py` | — | 209 файлов документов по схемам |
+| `spec/` | `python spec/check_schema.py` | — | 242 файла документов по схемам |
 
 Здесь Δr — максимальное расхождение контура порта с референсом на равномерной
 сетке 6000 точек в сечении. Допуск — `1e-6` мм, то есть фактическое расхождение
@@ -155,6 +156,7 @@ powershell -File verify_all.ps1 -Only r,julia
 | `julia/` | Julia (пакет `Pappa`, только stdlib, офлайн): пайплайн + `test/runtests.jl` |
 | `r/` | R (**только base R**, без пакетов: свой JSON/CSV/статистика): пайплайн + `tests/runtests.R` |
 | `csharp/` | C# (.NET 10, **без пакетов NuGet**: свой JSON/CSV/статистика): один exe с командами `conformance` / `selftest` / `pipeline` |
+| `fsharp/` | F# (.NET 10, **без пакетов NuGet**: свой JSON/CSV/статистика): тот же exe с командами `conformance` / `selftest` / `pipeline`; сборка и через PowerShell (`build_fsharp.ps1`), и через POSIX-shell (`build_fsharp.sh`) |
 | `octave/` | GNU Octave (**только ядро**, без пакетов `io`/`statistics`: свой JSON/CSV/статистика): пайплайн + `bin/selftest.m` |
 | `vba/` | VBA 7 (Microsoft Excel 2016+, **без надстроек и COM-объектов**: свой JSON/CSV/статистика, один вызов Win32 ради UTC): модули `.bas` импортируются в книгу через COM, `build_vba.ps1` с режимами `-Vectors` / `-Test` / `-Pipeline` |
 | `legacy/` | Легаси-методы (детектор v3, ручной очиститель) — только для воспроизведения старых измерений |
@@ -162,7 +164,7 @@ powershell -File verify_all.ps1 -Only r,julia
 
 ## Портирование в новый язык
 
-Порядок, отработанный на 15 реализациях:
+Порядок, отработанный на 16 реализациях:
 
 1. прочитать [`docs/method.md`](docs/method.md) — §11 перечисляет ловушки, на
    которых спотыкались реальные порты (округление половины, знак остатка,

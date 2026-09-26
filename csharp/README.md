@@ -88,10 +88,12 @@ python python/studies/verify_port.py --py-dir samples/synthetic_sphere `
 
 ## Заметки по совместимости (ловушки C#)
 
-* **Округление окна** — `Math.Round(x, MidpointRounding.ToEven)`, а не `Math.Round(x)`:
-  у второго половина уходит **от нуля** (в Python `round(2.5) == 2`), и окна разъехались
-  бы. Та же тонкость, что `f64::round_ties_even` в Rust, `Math.rint` в JVM-портах и
-  `math.RoundToEven` в Go.
+* **Округление окна** — `Math.Round(x, MidpointRounding.ToEven)`; `MidpointRounding`
+  выписан явно, чтобы намерение читалось, хотя в .NET «к чётному» — поведение по
+  умолчанию (`Math.Round(2.5) == 2`, проверено). Опасна не «половина к чётному», а
+  «половина ОТ НУЛЯ»: `f64::round` в Rust, `round` в C, `math.Round` в Go — и
+  `Math.round` в JS («к +∞»). Та же тонкость, что `f64::round_ties_even` в Rust,
+  `Math.rint` в JVM-портах и `math.RoundToEven` в Go.
 * **`%` со знаком делимого** — `-1 % 360 == -1`, а не `359`: все кольцевые формулы
   пишутся как `((a - b + 180) % 360 + 360) % 360`.
 * **Булевы в JSON** — `StringBuilder.Append(bool)` печатает `True`/`False`; в
