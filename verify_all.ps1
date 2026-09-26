@@ -11,7 +11,7 @@
 #
 # A port whose toolchain is absent is reported as SKIP with the reason and does NOT fail
 # the run: the repository is meant to be readable on a machine that has only a few of the
-# thirteen toolchains installed.
+# toolchains installed.
 #
 # ENCODING NOTE: this file is UTF-8 without BOM, like every other .ps1 here. Windows
 # PowerShell 5.1 reads such a file in the ANSI code page, so the EXECUTABLE text below is
@@ -274,6 +274,19 @@ $ports = @(
         Pipeline = (New-PsStep 'octave/build_octave.ps1' @('-Pipeline'))
         Sample = 'synthetic_sphere_octave'
         Note = 'bin/*.m scripts; the self-test covers vectors + smoke fit + document round-trip'
+    }
+    @{
+        Name = 'vba'; Title = 'VBA 7 in Microsoft Excel (modules imported through COM)'
+        Tool = @("$env:ProgramFiles\Microsoft Office\root\Office16\EXCEL.EXE",
+                 "$env:ProgramFiles\Microsoft Office\Office16\EXCEL.EXE",
+                 "${env:ProgramFiles(x86)}\Microsoft Office\root\Office16\EXCEL.EXE",
+                 "${env:ProgramFiles(x86)}\Microsoft Office\Office16\EXCEL.EXE")
+        Build = (New-PsStep 'vba/build_vba.ps1' @())
+        Vectors = (New-PsStep 'vba/build_vba.ps1' @('-Vectors'))
+        Tests = (New-PsStep 'vba/build_vba.ps1' @('-Test'))
+        Pipeline = (New-PsStep 'vba/build_vba.ps1' @('-Pipeline'))
+        Sample = 'synthetic_sphere_vba'
+        Note = 'needs Excel 2016+ and a one-time AccessVBOM; every run goes through a job with a timeout'
     }
 
 )

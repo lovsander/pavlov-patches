@@ -18,8 +18,8 @@ Approximation):
   python spec/check_schema.py samples/synthetic_sphere_r          # одна папка/порт
   ```
   Коды: `0` — всё сошлось, `1` — нарушения, `2` — нечего проверять.
-  Проверено на всех папках образцов всех портов (20 папок × 10 сечений + манифесты
-  = 220 файлов).
+  Проверено на всех папках образцов всех портов (21 папка × 10 сечений + манифесты
+  = 231 файл).
 - `conformance/` — golden vectors (`input -> expected output`) used to verify
   every language port against the reference implementation;
   see `conformance/README.md` for the vector format and tolerances.
@@ -39,6 +39,7 @@ Tools:
 | Проверить документы по схемам | `python spec/check_schema.py [папки]` |
 | Сгенерировать векторы | `python python/studies/make_conformance.py` |
 | Проверить порт по векторам | `cpp/build-*/…/pappa_conformance spec/conformance/vectors` (без Python) |
+| Проверить VBA-порт (Excel) | `powershell -File vba/build_vba.ps1 -Vectors` / `-Test` / `-Pipeline` (модули `.bas` импортируются в книгу через COM) |
 | Сверить порт с референсом на образце | `python python/studies/verify_port.py` |
 | Всё сразу, по всем портам | `powershell -File verify_all.ps1 [-Full]` |
 
