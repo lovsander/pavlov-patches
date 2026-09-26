@@ -180,6 +180,17 @@ $ports = @(
         Sample = 'synthetic_sphere_js'
     },
     @{
+        Name = 'fortran'; Title = 'Fortran 2018 (gfortran 10.3; no external libraries)'
+        Tool = @('gfortran', 'C:\TDM-GCC-64\bin\gfortran.exe',
+                 'C:\msys64\mingw64\bin\gfortran.exe', 'C:\msys64\ucrt64\bin\gfortran.exe')
+        Build = $null
+        Vectors = (New-PsStep 'fortran/build_fortran.ps1' @('-Vectors'))
+        Tests = (New-PsStep 'fortran/build_fortran.ps1' @('-Test'))
+        Pipeline = (New-Step '.' @('fortran/bin/pappa.exe', '--input', 'python/synthetic_data.csv', '--out-dir', 'samples/synthetic_sphere_fortran', '--name', 'synthetic_sphere', '--quiet'))
+        Sample = 'synthetic_sphere_fortran'
+        Note = 'one build script compiles modules, conformance and selftest; -Test = vectors + JSON round-trip + smoke fit'
+    },
+    @{
         Name = 'java'; Title = 'Java (plain javac; SelfTest = vectors + smoke fit)'
         Tool = @('javac', 'java')
         Build = $null

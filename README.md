@@ -29,8 +29,9 @@ coefficients per section — so the same model is evaluable in any language.
   корректность любого языка проверяется одними и теми же векторами
   (`spec/conformance/`) и числовой сверкой с референсом.
 
-**12 языковых реализаций** одного метода (плюс референс на Python): C++17, C99,
-Go, JavaScript, Java, Kotlin, Rust, C# (.NET), Free Pascal, Swift, Julia, R. Каждая —
+**14 языковых реализаций** одного метода (плюс референс на Python): C++17, C99,
+Go, JavaScript, Java, Kotlin, Rust, C# (.NET), Free Pascal, Fortran 2018, Swift,
+Julia, R, GNU Octave. Каждая —
 полный пайплайн «CSV → папка образца», свои ворота (векторы + тесты) и запись
 документов по общему контракту.
 
@@ -100,7 +101,7 @@ powershell -File verify_all.ps1 -Only r,julia
 ```
 
 Порт без установленного тулчейна помечается `SKIP` с причиной и не считается
-провалом: репозиторий должен читаться и на машине с 2–3 тулчейнами из 15 строк
+провалом: репозиторий должен читаться и на машине с 2–3 тулчейнами из 16 строк
 таблицы ниже.
 
 Результат на машине разработчика (Windows, 2026-09-25: доступны все тулчейны,
@@ -117,6 +118,7 @@ powershell -File verify_all.ps1 -Only r,julia
 | `kotlin/` | `pappa.SelfTest` | `pappa.SelfTest` | 10/10, 1.34e-12 |
 | `rust/` | `bin/conformance` (cargo, offline) | `cargo test` | 10/10, 1.34e-12 |
 | `pascal/` | `bin/conformance.exe` | `bin/selftest.exe` | 10/10, 1.38e-12 |
+| `fortran/` | `build_fortran.ps1 -Vectors` → `bin/conformance.exe` (gfortran 10.3, без внешних библиотек: свой JSON/CSV/статистика) | `build_fortran.ps1 -Test` → `bin/selftest.exe` (тесты JSON + векторы + дымовой фит) | 10/10, 1.35e-12 |
 | `swift/` | `ConformanceCLI` | `swift test` | 10/10, 1.34e-12 |
 | `julia/` | `bin/conformance.jl` | `test/runtests.jl` | 10/10, 1.34e-12 |
 | `r/` | `bin/conformance.R` | `tests/runtests.R` | 10/10, 1.36e-12 |
@@ -147,6 +149,7 @@ powershell -File verify_all.ps1 -Only r,julia
 | `kotlin/` | Kotlin (`kotlinc` из Android Studio): пайплайн + `pappa.SelfTest` |
 | `rust/` | Rust (cargo, **без crate-ов**, офлайн-сборка): пайплайн + `cargo test` |
 | `pascal/` | Free Pascal (FPC 3.2, только RTL): пайплайн + `selftest` |
+| `fortran/` | Fortran 2018 (gfortran, **без внешних библиотек**: свой JSON/CSV/статистика): пайплайн + `bin/selftest.exe` |
 | `swift/` | Swift (SwiftPM, без пакетов; на Windows нужен `SDKROOT`): пайплайн + `swift test` |
 | `julia/` | Julia (пакет `Pappa`, только stdlib, офлайн): пайплайн + `test/runtests.jl` |
 | `r/` | R (**только base R**, без пакетов: свой JSON/CSV/статистика): пайплайн + `tests/runtests.R` |
@@ -157,7 +160,7 @@ powershell -File verify_all.ps1 -Only r,julia
 
 ## Портирование в новый язык
 
-Порядок, отработанный на 13 реализациях:
+Порядок, отработанный на 14 реализациях:
 
 1. прочитать [`docs/method.md`](docs/method.md) — §11 перечисляет ловушки, на
    которых спотыкались реальные порты (округление половины, знак остатка,
