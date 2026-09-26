@@ -6,6 +6,10 @@
 #   powershell -File verify_all.ps1 -Only r,julia   only the listed ports
 #   powershell -File verify_all.ps1 -List           show the table of ports and commands
 #
+# Same gates WITHOUT PowerShell (Linux / macOS / Git Bash): python3 tools/verify_all.py
+# (--full, --only, --list, --os posix --dry-run; see tools/README.md). This script stays
+# the primary one on Windows, where the toolchains live in MSYS2/Android Studio/Excel.
+#
 # Exit code: 0 = every executed gate passed (skips are allowed), 1 = something failed,
 # 2 = nothing could be executed on this machine.
 #

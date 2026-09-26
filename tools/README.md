@@ -1,0 +1,67 @@
+# tools/
+
+## `verify_all.py` — ворота всех портов без PowerShell
+
+`verify_all.ps1` в корне — первичный и полностью обкатанный вход (Windows). Но
+внутри него Windows-специфика: вызовы `powershell.exe`, MSVC-пресеты CMake,
+`C:\msys64\mingw64\bin\gcc.exe`, `C:\FPC`, Android Studio, Excel COM. На Linux/macOS
+этот набор неприменим вовсе, поэтому рядом живёт тот же веер ворот на
+**stdlib-Python 3** (зависимостей нет):
+
+```bash
+python3 tools/verify_all.py                        # сборка + векторы + свои тесты
+python3 tools/verify_all.py --full                 # + пайплайн каждого порта и сверка с референсом
+python3 tools/verify_all.py --vectors-only         # только сборка + векторы
+python3 tools/verify_all.py --only r,julia,fsharp  # выбранные порты
+python3 tools/verify_all.py --list                 # таблица портов и точные команды
+python3 tools/verify_all.py --os posix --dry-run   # что запускалось бы на POSIX (ничего не запускается)
+python3 tools/verify_all.py --no-build             # без пересборки
+```
+
+Коды возврата и формат отчёта — как у `verify_all.ps1`: `0` — все выполненные ворота
+прошли (пропуски допустимы), `1` — что-то упало, `2` — на машине нечего запускать.
+Порт без тулчейна помечается `SKIP` с причиной и провалом не считается.
+
+### Как выбираются команды
+
+Один и тот же порт описывается один раз, но команды собираются по ОС:
+
+| Что | Windows | POSIX |
+|---|---|---|
+| Python | `python` | `python3` |
+| C++ | пресет `msvc-release` (+ `Release\pappa_pipeline.exe`) | `cmake --preset gcc-release`, `ctest --preset gcc-release` |
+| C | `gcc` из MSYS2 | `gcc`/`cc` из PATH |
+| Java/Kotlin | `javac`/`kotlinc`, classpath через `;` | то же, classpath через `:` |
+| C#/F# | `pappa.exe` (apphost) | `dotnet pappa.dll` (apphost собирается не всегда) |
+| Swift | нужен `SDKROOT` → `Windows.sdk` (драйвер подставляет) | `swift build`, `swift test` |
+| Octave | `octave-cli --no-gui --quiet --no-init-file` | `octave-cli --quiet --no-init-file` |
+| VBA | `vba/build_vba.ps1` (Excel COM) | строки нет: VBA 7 живёт внутри Excel |
+
+### Ловушки, которые драйвер обходит сам
+
+* **Store-алиас `python`.** В PATH на Windows может стоять заглушка
+  `WindowsApps\python3.exe`: она работает из консоли, но как дочерний процесс
+  возвращает 9009 без вывода. Поэтому каждый кандидат в интерпретаторы реально
+  запускается (`-c "import numpy"`), а не просто ищется в PATH; порядок
+  предпочтений — текущий интерпретатор, PATH, conda-окружения (приоритет у
+  `geom-toolkit` — окружения референса).
+* **Относительный `argv[0]`.** На Windows относительный путь к выполняемому файлу
+  разворачивается от каталога РОДИТЕЛЯ, а не от `cwd=` дочернего процесса: драйвер
+  сам приводит его к абсолютному (`rust/target/release/conformance.exe` иначе даёт
+  «файл не найден»).
+* **`.bat` через `cmd /c`.** `CreateProcess` не запускает `kotlinc.bat` из Android
+  Studio напрямую.
+* **`PYTHONIOENCODING=utf-8`.** Чекеры портов печатают кириллицу и `Δ`; когда stdout —
+  труба, Python берёт локальную кодовую страницу (cp1251) и падает с
+  `UnicodeEncodeError`. Это же лечит прогон через `verify_all.ps1`, где вывод уходит в файл.
+
+### Честно о проверке кроссплатформенности
+
+* Windows-ветка таблицы прогнана целиком на машине разработчика (`--full`):
+  **18 OK, 0 SKIP, 0 FAIL**, код 0 — все четыре ворот у всех 17 портов, включая
+  числовую сверку с референсом.
+* POSIX-ветка собрана по тем же командам, что и в `build_*.ps1`/README портов, но на
+  настоящей Linux-машине ещё НЕ прогонялась (в этом репозитории нет CI). Проверить её
+  на любой машине можно так: `python3 tools/verify_all.py --os posix --dry-run` покажет
+  точные команды, `--full` — прогонит то, что установлено (остальное даст `SKIP`).
+  Первый запуск на Linux стоит делать по шагам: `--only spec,python,go,js,c,rust`.

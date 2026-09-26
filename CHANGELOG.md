@@ -5,6 +5,28 @@
 
 ## Unreleased
 
+**Ворота и переносимость**
+
+* `tools/verify_all.py` — тот же веер ворот, что у `verify_all.ps1`, но без
+  PowerShell: stdlib-Python 3, работает на Linux/macOS/Windows. Таблица портов одна,
+  команды собираются по ОС (`gcc-release` вместо `msvc-release`, `python3` вместо
+  `python`, `:` вместо `;` в classpath, `dotnet pappa.dll` вместо apphost, `octave-cli`
+  без `--no-gui`, для Swift подставляется `SDKROOT`). Коды возврата и формат отчёта —
+  как у PowerShell-версии; есть `--only`, `--full`, `--vectors-only`, `--no-build`,
+  `--list`, `--os posix|windows` и `--dry-run`. Прогон на машине разработчика
+  (`--full`, все тулчейны): **18 OK, 0 SKIP, 0 FAIL**, код 0. Порт `vba` в
+  POSIX-прогоне отсутствует по природе (VBA 7 живёт внутри Excel).
+* Драйвер обходит Windows-грабли, на которые легко наступить в своём коде: алиас
+  `python` из Microsoft Store (в дочернем процессе даёт 9009 без вывода — поэтому
+  интерпретатор выбирается фактическим запуском, а не `shutil.which`), относительный
+  `argv[0]` (CreateProcess разворачивает его от каталога родителя, а не от `cwd=`),
+  `.bat`/`.cmd` только через `cmd /c` (`kotlinc.bat` из Android Studio) и
+  `PYTHONIOENCODING=utf-8` для чекеров, печатающих кириллицу и `Δ`.
+* `fortran/tests/test_json.f90` перестал быть Windows-only: сверка «хвоста» пути к
+  входному CSV в манифесте нормализует разделители (`\` и `/`), иначе тест требовал
+  именно обратный слеш, как его пишет Python-пайплайн на Windows, и падал бы на любой
+  POSIX-машине.
+
 **Реализации**
 
 * `fortran/` — порт на Fortran 2018 (gfortran 10.3, **без внешних библиотек**: свой

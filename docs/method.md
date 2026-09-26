@@ -434,6 +434,14 @@ powershell -File verify_all.ps1 -Full      # + пайплайн каждого �
 powershell -File verify_all.ps1 -List      # что именно запускается
 ```
 
+То же без PowerShell (Linux/macOS/Git Bash) — `tools/verify_all.py` на stdlib-Python 3:
+`python3 tools/verify_all.py --full`. Это не «второй верификатор»: у него та же
+таблица портов, те же ворота и те же коды возврата, но команды выбираются по ОС
+(`gcc-release` вместо `msvc-release`, `python3` вместо `python`, `:` вместо `;` в
+classpath, `dotnet pappa.dll` вместо apphost). `--os posix --dry-run` печатает
+POSIX-команды, ничего не запуская, `--list` — точные команды своей ОС. Строка `vba`
+в POSIX-прогоне отсутствует: VBA 7 живёт внутри Excel, а Excel есть только на Windows.
+
 Порты без тулчейна на машине помечаются `SKIP` и не считаются провалом.
 
 ## 13. Где что лежит (карта референса на Python)

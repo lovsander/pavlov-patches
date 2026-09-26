@@ -89,6 +89,9 @@ python python/studies/verify_port.py --py-dir samples/synthetic_sphere --cpp-dir
 
 # 4) всё сразу по всем реализациям: векторы + тесты, с -Full ещё пайплайн и сверка
 powershell -File verify_all.ps1 -Full
+
+# то же без PowerShell (Linux / macOS / Git Bash) — тот же набор ворот:
+python3 tools/verify_all.py --full
 ```
 
 ## Как проверяется корректность
@@ -99,6 +102,28 @@ powershell -File verify_all.ps1 -Full      # + пайплайн каждого �
 powershell -File verify_all.ps1 -List      # что именно запускается (порт, команда)
 powershell -File verify_all.ps1 -Only r,julia
 ```
+
+То же самое **без PowerShell** — для Linux, macOS и Git Bash:
+
+```bash
+python3 tools/verify_all.py            # сборка + конформанс-векторы + свои тесты
+python3 tools/verify_all.py --full     # + пайплайн каждого порта и числовая сверка
+python3 tools/verify_all.py --list     # таблица портов и точные команды
+python3 tools/verify_all.py --only r,julia
+python3 tools/verify_all.py --os posix --dry-run   # какие команды были бы на POSIX (ничего не запускается)
+```
+
+`tools/verify_all.py` (stdlib-Python 3, зависимостей нет) — тот же набор ворот, те же
+коды возврата и тот же `SKIP` для отсутствующих тулчейнов, но команды выбираются по
+ОС: `gcc-release` вместо `msvc-release`, `python3` вместо `python`, `:` вместо `;` в
+classpath, `dotnet pappa.dll` вместо apphost, `swift build`/`cargo build --release`
+и т. д. Windows остаётся на `verify_all.ps1` (он первичный и полностью обкатанный);
+драйвер нужен там, где PowerShell-скрипты неприменимы — внутри них MSVC-пресеты,
+`C:\msys64` и Excel COM. Единственная реализация, которая по природе остаётся
+Windows-only, — `vba/`: VBA 7 живёт внутри Excel, в POSIX-прогоне этой строки нет.
+
+Прогон драйвера на машине разработчика (Windows, все тулчейны, `--full`):
+**18 OK, 0 SKIP, 0 FAIL**, код 0 — то же, что даёт `verify_all.ps1 -Full`.
 
 Порт без установленного тулчейна помечается `SKIP` с причиной и не считается
 провалом: репозиторий должен читаться и на машине с 2–3 тулчейнами из 18 строк
@@ -161,6 +186,7 @@ powershell -File verify_all.ps1 -Only r,julia
 | `vba/` | VBA 7 (Microsoft Excel 2016+, **без надстроек и COM-объектов**: свой JSON/CSV/статистика, один вызов Win32 ради UTC): модули `.bas` импортируются в книгу через COM, `build_vba.ps1` с режимами `-Vectors` / `-Test` / `-Pipeline` |
 | `legacy/` | Легаси-методы (детектор v3, ручной очиститель) — только для воспроизведения старых измерений |
 | `verify_all.ps1` | Одна команда: ворота всех реализаций (векторы, тесты, пайплайн, сверка) |
+| `tools/` | `verify_all.py` — те же ворота без PowerShell (Linux/macOS/Git Bash): та же таблица портов, команды выбираются по ОС; см. `tools/README.md` |
 
 ## Портирование в новый язык
 

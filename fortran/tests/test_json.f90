@@ -82,14 +82,34 @@ contains
 
   ! Хвост строки: нужен там, где полный путь зависит от машины (путь к CSV
   ! внутри sample.json записан абсолютным).
+  ! Разделитель пути в манифестах зависит от ОС: питон-пайплайн на Windows пишет
+  ! '\', на Linux — '/'. Сверка хвоста нормализует разделители, иначе проверка
+  ! образца была бы Windows-only (а сам тест — красным на любой POSIX-машине).
+  pure function path_norm(s) result(r)
+    character(len=*), intent(in) :: s
+    character(len=len(s)) :: r
+    integer :: k
+    r = s
+    do k = 1, len_trim(r)
+      if (r(k:k) == achar(92_1)) r(k:k) = '/'
+    end do
+  end function path_norm
+
   subroutine check_suffix(got, tail, what)
     character(len=*), intent(in) :: got, tail, what
-    if (len(got) < len(tail)) then
+    character(len=len(got)) :: g
+    character(len=len(tail)) :: t
+    integer :: ng, nt
+    g = path_norm(got)
+    t = path_norm(tail)
+    ng = len_trim(g)
+    nt = len_trim(t)
+    if (ng < nt) then
       nbad = nbad + 1
-      write(*, '(a)') 'FAIL '//what//': короткая строка ['//got//']'
-    else if (got(len(got) - len(tail) + 1:) /= tail) then
+      write(*, '(a)') 'FAIL '//what//': короткая строка ['//trim(g)//']'
+    else if (g(ng - nt + 1:ng) /= trim(t)) then
       nbad = nbad + 1
-      write(*, '(a)') 'FAIL '//what//': ['//got//'] не кончается на ['//tail//']'
+      write(*, '(a)') 'FAIL '//what//': ['//trim(g)//'] не кончается на ['//trim(t)//']'
     end if
   end subroutine check_suffix
 
