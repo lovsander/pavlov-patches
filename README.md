@@ -1,5 +1,7 @@
 # pavlov-patches
 
+**English** · [Русский](README.ru.md)
+
 **PAPPA — Piecewise Adaptive Poly-Patch Approximation** — *aka “Pavlov patches”.*
 
 Adaptive **piecewise** polynomial approximation of closed (periodic) profiles:
@@ -15,125 +17,132 @@ removal runs before the degree rule, the pit detector and the fit).
 A model is a plain JSON document (`pappa.json`) — a fixed, small set of
 coefficients per section — so the same model is evaluable in any language.
 
-Полное описание метода (математика + псевдокод + ловушки паритета):
-[`docs/method.md`](docs/method.md).
+Full description of the method (math + pseudocode + parity pitfalls):
+[`docs/method.md`](docs/method.md) (Russian: [`docs/method.ru.md`](docs/method.ru.md)).
 
-## Что именно вносит этот метод
+## What exactly this method contributes
 
-Портфель языков — это про переносимость. Сама ценность метода — четыре решения,
-каждое из которых видно в документе модели и проверено на синтетике
-(рисунки `docs/assets/method_star.png`, `method_degrees.png`,
-`method_cleaning.png`; числа печатает тот же скрипт, что их рисует):
+The language portfolio is about portability. The value of the method itself is four
+decisions, each of which is visible in the model document and verified on synthetic
+data (figures `docs/assets/method_star.png`, `method_degrees.png`,
+`method_cleaning.png`; the numbers are printed by the very script that draws them):
 
-| Решение | Что даёт | Границы / цена |
+| Decision | What it buys | Limits / cost |
 |---|---|---|
-| **«Звезда» патчей**: N = 7 перекрытий на всё тело, швы сдвинуты фазой 24.75° | узкий дефект не «звенит» по всему кольцу; узел не стоит вплотную к трещине (мин. отступ «яма → шов» по 10 сечениям: **+9.92°** против **+0.19°** при `phase_deg = 0`, где шов ближе 2° к трещине в 5 сечениях из 10) | раскладка — внешний параметр: N и фаза выбираются заранее перебором (`python/studies/explore_star_layout.py`), а не из данных сечения |
-| **Сшивка, а не «ближайший патч»**: smoothstep-разбиение единицы + обучение шире применения (±40.71° против ±30.71°) | контур C¹, на границе зоны применения патч опирается на данные, а не на экстраполяцию; ошибка остаётся в своём секторе | перекрытие тратит точки на двойную подгонку (в окне патча ~1337 точек из 5882) |
-| **Степень по остаткам** (RMSE-«локоть», допуск 5 %) | «занятые» патчи берут 10–14, гладкие 4–6 — локально, по своему окну; правило проверяемо по документу (`rmse_selected_mm ≤ rmse_best_mm · 1.05`) | это выбор бюджета, а не магия: однородный deg 14 точнее на этом сечении (max\|Δr\| 0.049 мм против 0.054 мм), но это 109 коэффициентов против **65** |
-| **Очистка выбросов ПЕРЕД моделью** (auto `iqr`, k = 3.0, медиана по кольцу) | выбросы не съедают ни выбор степени, ни амплитуды ям: без очистки max\|Δr\| **0.124 мм** и степени 6–8 вместо **0.054 мм** и 4–12 | на «стерильных» данных IQR → 0, порог упирается в 1 мм и очиститель фактически выключается (§7) |
+| **The patch “star”**: N = 7 overlaps over the whole body, seams rotated by phase 24.75° | a narrow defect does not ring around the whole ring; no node sits next to a crack (minimum “pit → seam” clearance over 10 sections: **+9.92°** versus **+0.19°** at `phase_deg = 0`, where the seam comes within 2° of a crack in 5 sections out of 10) | the layout is an external parameter: N and the phase are chosen in advance by brute force (`python/studies/explore_star_layout.py`), not from the data of a given section |
+| **Blending instead of “nearest patch”**: smoothstep partition of unity + training wider than use (±40.71° versus ±30.71°) | a C¹ contour; at the edge of its use zone a patch still rests on training data rather than on extrapolation, and the error stays inside its own sector | the overlap spends points on fitting twice (about 1337 points out of 5882 inside a patch window) |
+| **Degree from residuals** (RMSE “elbow”, 5 % tolerance) | “busy” patches take 10–14, smooth ones 4–6 — locally, from their own window; the rule is checkable from the document (`rmse_selected_mm ≤ rmse_best_mm · 1.05`) | this is a budget choice, not magic: a uniform deg 14 is more accurate on this section (max\|Δr\| 0.049 mm versus 0.054 mm), but that is 109 coefficients versus **65** |
+| **Outlier cleaning BEFORE the model** (auto `iqr`, k = 3.0, ring median) | outliers eat neither the degree choice nor the pit amplitudes: without cleaning max\|Δr\| is **0.124 mm** with degrees 6–8 instead of **0.054 mm** with 4–12 | on “sterile” data IQR → 0, the threshold hits its 1 mm cap and the cleaner effectively switches itself off (§7) |
 
-Два следствия, которые тоже стоит считать вкладом: **локальность** (ошибка
-ограничена сектором, поэтому усечённый ряд Фурье проигрывает структурно, а не по
-числу коэффициентов) и **детерминированный документ** — 65 коэффициентов вместо
-исходных измерений: контур воспроизводится без точек, по которым он построен.
+Two more consequences are also worth counting as contribution: **locality** (the
+error is bounded by the sector, which is why a truncated Fourier series loses
+structurally rather than by coefficient count) and the **deterministic document** —
+65 coefficients instead of the original measurements: the contour is reproduced
+without the points it was built from.
 
-Чего в этом утверждении **нет** — заявки на «магическую точность»: при удачно
-выбранном окне LPR даёт сравнимую ошибку, и разбор этого — в §14
+What this claim does **not** contain is a promise of “magical accuracy”: with a
+well-chosen window LPR gives a comparable error, and that analysis is in §14 of
 [`docs/method.md`](docs/method.md).
 
-## Что внутри
+## What is inside
 
-* **Раскладка «звезда»** — `N` перекрывающихся патчей на всё тело, швы (узлы)
-  уведены фазой `phase_deg = 24.75°` от сложных зон: минимальный отступ
-  «центр ямы → ближайший шов» по всем 10 сечениям **+9.92°** против **+0.19°**
-  при `phase_deg = 0`. Шов — единственное место, где контур не опирается ни на
-  один свежий центр патча, поэтому он не должен стоять в трещине;
-* **Сшивка, а не «выбор ближайшего патча»** — нормированное
-  smoothstep-разбиение единицы, при этом **обучение шире применения**
-  (`half_train = 40.71°` против `half_use = 30.71°`): на краю зоны применения
-  патч опирается на данные обучения, а не на экстраполяцию. Контур C¹: на швах
-  нет скачка производной, константа воспроизводится точно;
-* **Степень выбирает сам патч** — правило RMSE-«локтя» по остаткам на своём
-  окне: «занятые» секторы (с ямой у края, с перегибом) берут 10–14, гладкие 4–6.
-  Правило проверяемо по документу: `metrics.rmse_selected_mm ≤
-  metrics.rmse_best_mm · (1 + 0.05)`. Бюджет при этом явный: 65 коэффициентов
-  против 109 у однородного deg 14 (см. `method_degrees.png`);
-* **Очистка выбросов идёт ДО модели** (auto `iqr`, `k = 3.0`, медианное окно по
-  кольцу): иначе выбросы «съедают» и выбор степени, и амплитуды ям — та же
-  модель на грязных точках даёт max|Δr| 0.124 мм против 0.054 мм;
-* **Фичер ям** — узкая глубокая яма описывается явным членом базиса (усечённый
-  гаусс 3.2σ с плавным выходом в базис), а не вынужденным ростом степени
-  полинома. Раскладка ям — общая с раскладкой патчей (одна фаза на тело);
-* **Локальность** — ошибка ограничена внутри сектора, никакого глобального
-  «звона» (Гиббса) на узких дефектах; выброс в одном секторе не «тянет» профиль
-  в соседних;
-* **Компактность и детерминизм** — фиксированный небольшой набор коэффициентов
-  на сечение; ни обучение, ни оценка не требуют исходных измерений;
-* **Переносимость** — модель — обычный JSON (`spec/pappa.schema.json`), а
-  корректность любого языка проверяется одними и теми же векторами
-  (`spec/conformance/`) и числовой сверкой с референсом.
+* **“Star” layout** — `N` overlapping patches over the whole body; the seams
+  (nodes) are moved away from difficult zones by the phase `phase_deg = 24.75°`:
+  the minimum “pit centre → nearest seam” clearance over all 10 sections is
+  **+9.92°** versus **+0.19°** at `phase_deg = 0`. A seam is the only place where
+  the contour rests on no fresh patch centre at all, so it must not sit in a
+  crack;
+* **Blending, not “pick the nearest patch”** — a normalized smoothstep partition
+  of unity, plus **training wider than use** (`half_train = 40.71°` versus
+  `half_use = 30.71°`): at the edge of its use zone a patch rests on training data
+  rather than on extrapolation. The contour is C¹: no derivative jump at the
+  seams, and a constant is reproduced exactly;
+* **Each patch picks its own degree** — the RMSE “elbow” rule on the residuals of
+  its own window: “busy” sectors (a pit near the edge, an inflection) take 10–14,
+  smooth ones 4–6. The rule is checkable from the document:
+  `metrics.rmse_selected_mm ≤ metrics.rmse_best_mm · (1 + 0.05)`. The budget stays
+  explicit: 65 coefficients versus 109 for a uniform deg 14 (see
+  `method_degrees.png`);
+* **Outlier cleaning runs BEFORE the model** (auto `iqr`, `k = 3.0`, median window
+  over the ring): otherwise outliers eat both the degree choice and the pit
+  amplitudes — the same model on dirty points gives max|Δr| 0.124 mm versus
+  0.054 mm;
+* **Pit feature** — a narrow deep pit is described by an explicit basis term (a
+  tapered Gaussian at 3.2σ with a smooth return to the basis) instead of a forced
+  rise of the polynomial degree. The pit layout shares the patch layout (one phase
+  for the whole body);
+* **Locality** — the error is bounded inside the sector, there is no global
+  “ringing” (Gibbs) on narrow defects, and an outlier in one sector does not pull
+  the profile in its neighbours;
+* **Compactness and determinism** — a fixed, small set of coefficients per
+  section; neither fitting nor evaluation needs the original measurements;
+* **Portability** — a model is a plain JSON file (`spec/pappa.schema.json`), and
+  the correctness of any language is checked by the same vectors
+  (`spec/conformance/`) and by numerical comparison against the reference.
 
-**16 языковых реализаций** одного метода (плюс референс на Python): C++17, C99,
-Go, JavaScript, Java, Kotlin, Rust, C# (.NET), F# (.NET), Free Pascal, Fortran 2018,
-Swift, Julia, R, GNU Octave, VBA 7 (Microsoft Excel). Каждая —
-полный пайплайн «CSV → папка образца», свои ворота (векторы + тесты) и запись
-документов по общему контракту.
+**16 language implementations** of one method (plus the Python reference): C++17,
+C99, Go, JavaScript, Java, Kotlin, Rust, C# (.NET), F# (.NET), Free Pascal,
+Fortran 2018, Swift, Julia, R, GNU Octave, VBA 7 (Microsoft Excel). Each one is a
+full “CSV → sample folder” pipeline with its own gates (vectors + tests) and with
+documents written to the common contract.
 
-## Как это выглядит
+## What it looks like
 
-Раскладка «звезда»: лучи-центры, швы, обучение шире применения и фаза против
-трещин:
+The “star” layout: radial centres, seams, training wider than use, and the phase
+fighting the cracks:
 
-![раскладка «звезда»: лучи, швы, окна обучения и применения](docs/assets/method_star.png)
+![“star” layout: rays, seams, training and use windows](docs/assets/method_star.png)
 
-Выбор степени: правило «локтя» по каждому патчу и цена против ошибки (одна
-степень на все патчи против адаптивной):
+Degree selection: the “elbow” rule per patch, and cost versus error (one degree
+for all patches versus the adaptive one):
 
-![выбор степени: правило «локтя» и цена против ошибки](docs/assets/method_degrees.png)
+![degree selection: the “elbow” rule and cost versus error](docs/assets/method_degrees.png)
 
-Очистка выбросов: маска, «ненормальность» против порога IQR и та же модель,
-обученная на грязных точках:
+Outlier cleaning: the mask, “abnormality” versus the IQR threshold, and the same
+model fitted to dirty points:
 
-![авто-очистка выбросов и цена отказа от неё](docs/assets/method_cleaning.png)
+![automatic outlier cleaning and the price of skipping it](docs/assets/method_cleaning.png)
 
-Метод «изнутри», детектор ям и сравнения:
+The method from the inside, the pit detector and the comparisons:
 
-![метод изнутри: патчи, веса, ошибка](docs/assets/method_patches.png)
+![the method inside: patches, weights, error](docs/assets/method_patches.png)
 
-![детектор трещин band](docs/assets/method_detector.png)
+![the band crack detector](docs/assets/method_detector.png)
 
-![сравнение с усечённым рядом Фурье](docs/assets/method_vs_fourier.png)
+![comparison with a truncated Fourier series](docs/assets/method_vs_fourier.png)
 
-![сравнение с локальной полиномиальной регрессией](docs/assets/method_vs_lpr.png)
+![comparison with local polynomial regression](docs/assets/method_vs_lpr.png)
 
-Все семь рисунков собираются одной командой —
-`python python/studies/make_method_figures.py` — и она же печатает числа, которые
-попадают в текст (таблица ошибок, степени патчей, центры ям, отступы швов,
-счётчики очистки), плюс две самопроверки: зеркало правила «локтя» на рисунке даёт
-ровно те степени, что модель, а маска очистки совпадает с прямым вызовом
-`build_cleaner`. Разбор чисел — [`docs/method.md`](docs/method.md) §14.
+All seven figures are built by one command —
+`python python/studies/make_method_figures.py` — and it also prints the numbers
+that go into this text (the error table, patch degrees, pit centres, seam
+clearances, cleaning counters) plus two self-checks: the mirror of the “elbow”
+rule on the figure gives exactly the degrees the model chose, and the cleaning
+mask matches a direct call to `build_cleaner`. The analysis of the numbers is in
+§14 of [`docs/method.md`](docs/method.md).
 
-Сравнение степеней на сечении 0 (одна и та же модель, но степень задана всем
-патчам одинаково; коэффициенты — как в документе, полиномы + ямные члены):
+Degree comparison on section 0 (the same model, but the degree is forced to be
+equal for all patches; coefficients as in the document, polynomials + pit terms):
 
-| Вариант | Коэф. | max\|Δr\| к истине, мм | RMSE, мм |
+| Variant | Coeff. | max\|Δr\| to truth, mm | RMSE, mm |
 |---|---|---|---|
-| все патчи deg 4 | 39 | 3.98e-01 | 8.48e-02 |
-| все патчи deg 6 | 53 | 2.31e-01 | 4.81e-02 |
-| все патчи deg 8 | 67 | 1.06e-01 | 2.44e-02 |
-| все патчи deg 10 | 81 | 5.89e-02 | 1.64e-02 |
-| все патчи deg 12 | 95 | 5.42e-02 | 1.34e-02 |
-| все патчи deg 14 | 109 | 4.87e-02 | 1.22e-02 |
-| **PAPPA: степень по патчам** (4–12) | **65** | **5.42e-02** | **1.51e-02** |
+| all patches deg 4 | 39 | 3.98e-01 | 8.48e-02 |
+| all patches deg 6 | 53 | 2.31e-01 | 4.81e-02 |
+| all patches deg 8 | 67 | 1.06e-01 | 2.44e-02 |
+| all patches deg 10 | 81 | 5.89e-02 | 1.64e-02 |
+| all patches deg 12 | 95 | 5.42e-02 | 1.34e-02 |
+| all patches deg 14 | 109 | 4.87e-02 | 1.22e-02 |
+| **PAPPA: degree per patch** (4–12) | **65** | **5.42e-02** | **1.51e-02** |
 
-Честное чтение: при похожем бюджете адаптивная степень выигрывает у любой
-одинаковой вдвое (deg 8: 67 коэф., 1.06e-01 против 5.42e-02), а по max\|Δr\|
-не хуже однородного deg 12 при 95 коэффициентах; строго точнее адаптивной только
-deg 14 (4.87e-02) — но это 109 чисел вместо 65 и МНК на `x^14` в каждом патче.
-Очистка же не «косметика»: без неё та же модель даёт max\|Δr\| 0.124 мм и степени
-`[6, 8, 4, 8, 4, 8, 4]` вместо 0.054 мм и `[8, 10, 4, 12, 4, 12, 4]`.
+An honest reading: at a similar budget the adaptive degree beats any uniform one
+by a factor of two (deg 8: 67 coeff., 1.06e-01 versus 5.42e-02), and in max\|Δr\|
+it is no worse than a uniform deg 12 at 95 coefficients; strictly more accurate
+than the adaptive one is only deg 14 (4.87e-02) — but that is 109 numbers instead
+of 65 and a least-squares fit on `x^14` in every patch. Cleaning, in turn, is not
+“cosmetics”: without it the same model gives max\|Δr\| 0.124 mm and degrees
+`[6, 8, 4, 8, 4, 8, 4]` instead of 0.054 mm and `[8, 10, 4, 12, 4, 12, 4]`.
 
-## Статус и границы применимости
+## Status and scope
 
 Intended application: in-process geometry of **bodies of revolution** measured by
 non-contact (laser/optical) scanning in sections along the axis, where a narrow
@@ -141,22 +150,21 @@ deep defect (pit, crack) is either smeared by low-order global bases or forces a
 very high degree on a fixed-degree patch grid. Here the degree adapts per patch
 and a pit can be carried by an explicit basis term.
 
-* проверено **на синтетике** (10 сечений × 6000 точек, R = 15 мм, три трещины
-  4–6° шириной, 2 % инжектированных выбросов) и на конформанс-векторах —
-  измерения на реальном сканере пока **не** заявляются;
-* известные ограничения: потолок степени и обусловленность, всплеск
-  переобучения на высоких степенях; «legacy»-методы оставлены только для
-  воспроизведения старых измерений;
-* выполнимость на микроконтроллерах (Arduino/Cortex-M/ESP32) измерена и описана
-  в [`docs/embedded.md`](docs/embedded.md) — там же разбор по платам и
-  стоимость по фазам.
+* verified **on synthetic data** (10 sections × 6000 points, R = 15 mm, three
+  cracks 4–6° wide, 2 % injected outliers) and on the conformance vectors —
+  measurements from a real scanner are **not** claimed yet;
+* known limitations: the degree ceiling and conditioning, and the overfitting
+  spike at high degrees; the “legacy” methods are kept only to reproduce older
+  measurements;
+* feasibility on microcontrollers (Arduino/Cortex-M/ESP32) is measured and
+  described in [`docs/embedded.md`](docs/embedded.md) (Russian only) — per-board
+  verdicts and per-phase cost are there.
 
-> Статус: **work in progress**, source-available (см. лицензию ниже).
-
+> Status: **work in progress**, source-available (see the licence below).
 
 ---
 
-## Идея в одном абзаце
+## The idea in one paragraph
 
 Divide the domain into `N` overlapping sectors. Fit an independent low-order
 polynomial over each sector; the sector’s residual behaviour (RMSE on the training
@@ -164,76 +172,77 @@ window, “elbow” rule) picks its degree. Reconstruct the profile as a normali
 smoothstep-weighted blend (partition of unity) of the patches, so the result is
 continuous, C¹, and locally faithful without global ringing.
 
+## Quick start (5 commands)
 
-## Быстрый старт (5 команд)
-
-Данные в репозитории не хранятся: синтетический CSV воспроизводится генератором
-(`seed 42`, 10 сечений × 6000 точек, R = 15 мм, три трещины). Проверено, что
-сгенерированный файл совпадает бит-в-бит с тем, на котором считались все
-результаты ниже (совпал `sha256`).
+The data is not stored in the repository: the synthetic CSV is reproduced by the
+generator (`seed 42`, 10 sections × 6000 points, R = 15 mm, three cracks). It has
+been checked that the generated file matches bit-for-bit the one all the results
+below were computed on (the `sha256` matched).
 
 ```bash
-# 0) данные (файл пишется в текущий каталог -> запускать внутри python/)
+# 0) data (the file is written to the current directory -> run inside python/)
 cd python && python generator/generate_data_crack_many.py && cd ..
 
-# 1) референс: CSV -> папка образца samples/synthetic_sphere (нужен Python с numpy)
+# 1) reference: CSV -> sample folder samples/synthetic_sphere (needs Python with numpy)
 python python/studies/build_sample.py --name synthetic_sphere
 
-# 2) любой порт пишет такую же папку своими силами (пример — R)
+# 2) any port writes the same folder on its own (example — R)
 powershell -File r/build_r.ps1 -Pipeline
 
-# 3) числовая сверка порта с референсом: контур, степени, ямы (код 0/1/2)
+# 3) numerical comparison of the port against the reference: contour, degrees, pits (code 0/1/2)
 python python/studies/verify_port.py --py-dir samples/synthetic_sphere --cpp-dir samples/synthetic_sphere_r
 
-# 4) всё сразу по всем реализациям: векторы + тесты, с -Full ещё пайплайн и сверка
+# 4) everything at once over all implementations: vectors + tests, and with -Full the pipeline and the comparison too
 powershell -File verify_all.ps1 -Full
 
-# то же без PowerShell (Linux / macOS / Git Bash) — тот же набор ворот:
+# the same without PowerShell (Linux / macOS / Git Bash) — the same set of gates:
 python3 tools/verify_all.py --full
 ```
 
-## Как проверяется корректность
+## How correctness is verified
 
 ```powershell
-powershell -File verify_all.ps1            # сборка + конформанс-векторы + свои тесты
-powershell -File verify_all.ps1 -Full      # + пайплайн каждого порта и числовая сверка
-powershell -File verify_all.ps1 -List      # что именно запускается (порт, команда)
+powershell -File verify_all.ps1            # build + conformance vectors + per-port tests
+powershell -File verify_all.ps1 -Full      # + every port's pipeline and numerical comparison
+powershell -File verify_all.ps1 -List      # what exactly is launched (port, command)
 powershell -File verify_all.ps1 -Only r,julia
 ```
 
-То же самое **без PowerShell** — для Linux, macOS и Git Bash:
+The same thing **without PowerShell** — for Linux, macOS and Git Bash:
 
 ```bash
-python3 tools/verify_all.py            # сборка + конформанс-векторы + свои тесты
-python3 tools/verify_all.py --full     # + пайплайн каждого порта и числовая сверка
-python3 tools/verify_all.py --list     # таблица портов и точные команды
+python3 tools/verify_all.py            # build + conformance vectors + per-port tests
+python3 tools/verify_all.py --full     # + every port's pipeline and numerical comparison
+python3 tools/verify_all.py --list     # the port table and the exact commands
 python3 tools/verify_all.py --only r,julia
-python3 tools/verify_all.py --os posix --dry-run   # какие команды были бы на POSIX (ничего не запускается)
+python3 tools/verify_all.py --os posix --dry-run   # what the commands would be on POSIX (nothing runs)
 ```
 
-`tools/verify_all.py` (stdlib-Python 3, зависимостей нет) — тот же набор ворот, те же
-коды возврата и тот же `SKIP` для отсутствующих тулчейнов, но команды выбираются по
-ОС: `gcc-release` вместо `msvc-release`, `python3` вместо `python`, `:` вместо `;` в
-classpath, `dotnet pappa.dll` вместо apphost, `swift build`/`cargo build --release`
-и т. д. Windows остаётся на `verify_all.ps1` (он первичный и полностью обкатанный);
-драйвер нужен там, где PowerShell-скрипты неприменимы — внутри них MSVC-пресеты,
-`C:\msys64` и Excel COM. Единственная реализация, которая по природе остаётся
-Windows-only, — `vba/`: VBA 7 живёт внутри Excel, в POSIX-прогоне этой строки нет.
+`tools/verify_all.py` (stdlib Python 3, no dependencies) is the same set of gates,
+with the same return codes and the same `SKIP` for missing toolchains, but the
+commands are chosen by OS: `gcc-release` instead of `msvc-release`, `python3`
+instead of `python`, `:` instead of `;` in the classpath, `dotnet pappa.dll`
+instead of the apphost, `swift build`/`cargo build --release`, and so on. Windows
+stays on `verify_all.ps1` (it is the primary and fully exercised entry point); the
+driver is for the places where the PowerShell scripts do not apply — they contain
+MSVC presets, `C:\msys64` and Excel COM. The only implementation that is
+Windows-only by nature is `vba/`: VBA 7 lives inside Excel, so POSIX runs have no
+row for it.
 
-Прогон драйвера на машине разработчика (Windows, все тулчейны, `--full`):
-**18 OK, 0 SKIP, 0 FAIL**, код 0 — то же, что даёт `verify_all.ps1 -Full`.
+A run of the driver on the developer machine (Windows, all toolchains, `--full`):
+**18 OK, 0 SKIP, 0 FAIL**, exit code 0 — the same as `verify_all.ps1 -Full`.
 
-Порт без установленного тулчейна помечается `SKIP` с причиной и не считается
-провалом: репозиторий должен читаться и на машине с 2–3 тулчейнами из 18 строк
-таблицы ниже.
+A port whose toolchain is not installed is marked `SKIP` with a reason and is not
+counted as a failure: the repository must be readable on a machine that has 2–3 of
+the 18 toolchains in the table below.
 
-Результат на машине разработчика (Windows, 2026-09-25: доступны все тулчейны,
-`0 SKIP`, `0 FAIL`, код выхода 0):
+The result on the developer machine (Windows, 2026-09-25: all toolchains
+available, `0 SKIP`, `0 FAIL`, exit code 0):
 
-| Реализация | Векторы (`spec/conformance`) | Свои тесты | Пайплайн + сверка с референсом |
+| Implementation | Vectors (`spec/conformance`) | Own tests | Pipeline + comparison with the reference |
 |---|---|---|---|
-| `python/` (референс) | — | — | строит `samples/synthetic_sphere` |
-| `cpp/` | `ctest -R conformance_vectors` | `ctest` (в т.ч. `port_parity_python`) | 10/10 сечений, max Δr 1.34e-12 мм |
+| `python/` (reference) | — | — | builds `samples/synthetic_sphere` |
+| `cpp/` | `ctest -R conformance_vectors` | `ctest` (including `port_parity_python`) | 10/10 sections, max Δr 1.34e-12 mm |
 | `c/` | `python/studies/check_c_port.py` | `check_c_pipeline.py` | 10/10, 1.34e-12 |
 | `go/` | `go run ./cmd/conformance` | `go test ./...` | 10/10, 1.34e-12 |
 | `js/` | `node cmd/conformance.js` | `node --test` | 10/10, 1.34e-12 |
@@ -241,72 +250,81 @@ Windows-only, — `vba/`: VBA 7 живёт внутри Excel, в POSIX-прог
 | `kotlin/` | `pappa.SelfTest` | `pappa.SelfTest` | 10/10, 1.34e-12 |
 | `rust/` | `bin/conformance` (cargo, offline) | `cargo test` | 10/10, 1.34e-12 |
 | `pascal/` | `bin/conformance.exe` | `bin/selftest.exe` | 10/10, 1.38e-12 |
-| `fortran/` | `build_fortran.ps1 -Vectors` → `bin/conformance.exe` (gfortran 10.3, без внешних библиотек: свой JSON/CSV/статистика) | `build_fortran.ps1 -Test` → `bin/selftest.exe` (тесты JSON + векторы + дымовой фит) | 10/10, 1.35e-12 |
+| `fortran/` | `build_fortran.ps1 -Vectors` → `bin/conformance.exe` (gfortran 10.3, no external libraries: own JSON/CSV/statistics) | `build_fortran.ps1 -Test` → `bin/selftest.exe` (JSON tests + vectors + smoke fit) | 10/10, 1.35e-12 |
 | `swift/` | `ConformanceCLI` | `swift test` | 10/10, 1.34e-12 |
 | `julia/` | `bin/conformance.jl` | `test/runtests.jl` | 10/10, 1.34e-12 |
 | `r/` | `bin/conformance.R` | `tests/runtests.R` | 10/10, 1.36e-12 |
-| `csharp/` | `pappa.exe conformance` (.NET 10, 0 пакетов NuGet) | `pappa.exe selftest` (векторы + дымовой фит + round-trip документа) | 10/10, 1.34e-12 |
-| `fsharp/` | `pappa conformance` (.NET 10 / F# 10, 0 пакетов NuGet; без PowerShell — `bash fsharp/build_fsharp.sh --vectors`) | `pappa selftest` (векторы + дымовой фит + round-trip документа) | 10/10, 1.34e-12 |
-| `octave/` | `bin/conformance.m` (Octave 11, только ядро: свой JSON/CSV/статистика) | `bin/selftest.m` (векторы + дымовой фит + round-trip документа) | 10/10, 1.34e-12 |
-| `vba/` | `powershell -File vba/build_vba.ps1 -Vectors` (Excel 16 / VBA 7 через COM: модули импортируются в книгу) | `-Test` → `PappaSelftest` (49 проверок: векторы + юниты + дымовой фит + round-trip документа) | 10/10, 1.37e-12 |
-| `spec/` | `python spec/check_schema.py` | — | 242 файла документов по схемам |
+| `csharp/` | `pappa.exe conformance` (.NET 10, 0 NuGet packages) | `pappa.exe selftest` (vectors + smoke fit + document round-trip) | 10/10, 1.34e-12 |
+| `fsharp/` | `pappa conformance` (.NET 10 / F# 10, 0 NuGet packages; without PowerShell: `bash fsharp/build_fsharp.sh --vectors`) | `pappa selftest` (vectors + smoke fit + document round-trip) | 10/10, 1.34e-12 |
+| `octave/` | `bin/conformance.m` (Octave 11, core only: own JSON/CSV/statistics) | `bin/selftest.m` (vectors + smoke fit + document round-trip) | 10/10, 1.34e-12 |
+| `vba/` | `powershell -File vba/build_vba.ps1 -Vectors` (Excel 16 / VBA 7 via COM: the modules are imported into a workbook) | `-Test` → `PappaSelftest` (49 checks: vectors + units + smoke fit + document round-trip) | 10/10, 1.37e-12 |
+| `spec/` | `python spec/check_schema.py` | — | 242 document files against the schemas |
 
-Здесь Δr — максимальное расхождение контура порта с референсом на равномерной
-сетке 6000 точек в сечении. Допуск — `1e-6` мм, то есть фактическое расхождение
-на шесть порядков меньше допустимого: совпадение машинное, а не «похожее».
-Протокол, допуски и ловушки переноса: `spec/conformance/README.md`,
-[`docs/method.md`](docs/method.md) §11.
+Here Δr is the maximum deviation of a port's contour from the reference on a
+uniform grid of 6000 points in a section. The tolerance is `1e-6` mm, so the
+actual deviation is six orders of magnitude below it: the match is machine-exact,
+not “similar”. Protocol, tolerances and porting pitfalls:
+`spec/conformance/README.md`, §11 of [`docs/method.md`](docs/method.md).
 
+## Repository layout
 
-## Структура репозитория
+| Path | Purpose |
+|------|---------|
+| `python/` | **Reference**: the `pappa/` package (`core`, `io`, `analysis`, `viz`, `report`); entry points in `studies/` (build a sample, generate vectors, verify a port), `demos/`, `generator/` (data); `research/` (rejected hypotheses and finished studies), `deprecated/` (archive, reports included) |
+| `spec/` | Contract: `pappa.schema.json`, `sample.schema.json`, `check_schema.py` (executable schema check), `conformance/` — golden vectors and tolerances |
+| `docs/` | `method.md` — formal description of the method (also `method.ru.md`); `embedded.md` — feasibility on microcontrollers; `assets/` — figures for the README and presentations |
+| `samples/` | Sample folders (`sample.json` + one document per section + `report/verify.json`) — generated, not committed |
+| `cpp/` | C++17 (CMake): full pipeline + `ctest` (vectors and the parity test) |
+| `c/` | C99: dependency-free core (suitable for an MCU) + host pipeline; checked by `check_c_port.py` / `check_c_pipeline.py` |
+| `go/` | Go: full pipeline + `go test ./...` |
+| `js/` | JavaScript (Node, ESM, no packages): pipeline + `node --test` |
+| `java/` | Java (JDK, `javac`, own mini-JSON): pipeline + `pappa.SelfTest` |
+| `kotlin/` | Kotlin (`kotlinc` from Android Studio): pipeline + `pappa.SelfTest` |
+| `rust/` | Rust (cargo, **no crates**, offline build): pipeline + `cargo test` |
+| `pascal/` | Free Pascal (FPC 3.2, RTL only): pipeline + `selftest` |
+| `fortran/` | Fortran 2018 (gfortran, **no external libraries**: own JSON/CSV/statistics): pipeline + `bin/selftest.exe` |
+| `swift/` | Swift (SwiftPM, no packages; on Windows `SDKROOT` is required): pipeline + `swift test` |
+| `julia/` | Julia (the `Pappa` package, stdlib only, offline): pipeline + `test/runtests.jl` |
+| `r/` | R (**base R only**, no packages: own JSON/CSV/statistics): pipeline + `tests/runtests.R` |
+| `csharp/` | C# (.NET 10, **no NuGet packages**: own JSON/CSV/statistics): one exe with the commands `conformance` / `selftest` / `pipeline` |
+| `fsharp/` | F# (.NET 10, **no NuGet packages**: own JSON/CSV/statistics): the same exe with `conformance` / `selftest` / `pipeline`; builds both via PowerShell (`build_fsharp.ps1`) and via POSIX shell (`build_fsharp.sh`) |
+| `octave/` | GNU Octave (**core only**, no `io`/`statistics` packages: own JSON/CSV/statistics): pipeline + `bin/selftest.m` |
+| `vba/` | VBA 7 (Microsoft Excel 2016+, **no add-ins and no COM objects**: own JSON/CSV/statistics, a single Win32 call for UTC): `.bas` modules imported into a workbook via COM, `build_vba.ps1` with the modes `-Vectors` / `-Test` / `-Pipeline` |
+| `legacy/` | Legacy methods (detector v3, manual cleaner) — only to reproduce older measurements |
+| `verify_all.ps1` | One command: the gates of every implementation (vectors, tests, pipeline, comparison) |
+| `tools/` | `verify_all.py` — the same gates without PowerShell (Linux/macOS/Git Bash): the same port table, commands chosen by OS; see `tools/README.md` |
 
-| Путь | Назначение |
-|------|------------|
-| `python/` | **Референс**: пакет `pappa/` (`core`, `io`, `analysis`, `viz`, `report`); точки входа в `studies/` (сборка образца, генерация векторов, сверка порта), `demos/`, `generator/` (данные); `research/` (отклонённые гипотезы и законченные исследования), `deprecated/` (архив, включая отчёты) |
-| `spec/` | Контракт: `pappa.schema.json`, `sample.schema.json`, `check_schema.py` (исполняемая проверка схем), `conformance/` — golden-векторы и допуски |
-| `docs/` | `method.md` — формальное описание метода; `embedded.md` — выполнимость на микроконтроллерах; `assets/` — картинки для README и презентаций |
-| `samples/` | Папки образцов (`sample.json` + документ на сечение + `report/verify.json`) — генерируются, в репозиторий не коммитятся |
-| `cpp/` | C++17 (CMake): полный пайплайн + `ctest` (векторы и parity-тест) |
-| `c/` | C99: ядро без зависимостей (пригодно для MCU) + хостовый пайплайн; проверка через `check_c_port.py` / `check_c_pipeline.py` |
-| `go/` | Go: полный пайплайн + `go test ./...` |
-| `js/` | JavaScript (Node, ESM, без пакетов): пайплайн + `node --test` |
-| `java/` | Java (JDK, `javac`, свой мини-JSON): пайплайн + `pappa.SelfTest` |
-| `kotlin/` | Kotlin (`kotlinc` из Android Studio): пайплайн + `pappa.SelfTest` |
-| `rust/` | Rust (cargo, **без crate-ов**, офлайн-сборка): пайплайн + `cargo test` |
-| `pascal/` | Free Pascal (FPC 3.2, только RTL): пайплайн + `selftest` |
-| `fortran/` | Fortran 2018 (gfortran, **без внешних библиотек**: свой JSON/CSV/статистика): пайплайн + `bin/selftest.exe` |
-| `swift/` | Swift (SwiftPM, без пакетов; на Windows нужен `SDKROOT`): пайплайн + `swift test` |
-| `julia/` | Julia (пакет `Pappa`, только stdlib, офлайн): пайплайн + `test/runtests.jl` |
-| `r/` | R (**только base R**, без пакетов: свой JSON/CSV/статистика): пайплайн + `tests/runtests.R` |
-| `csharp/` | C# (.NET 10, **без пакетов NuGet**: свой JSON/CSV/статистика): один exe с командами `conformance` / `selftest` / `pipeline` |
-| `fsharp/` | F# (.NET 10, **без пакетов NuGet**: свой JSON/CSV/статистика): тот же exe с командами `conformance` / `selftest` / `pipeline`; сборка и через PowerShell (`build_fsharp.ps1`), и через POSIX-shell (`build_fsharp.sh`) |
-| `octave/` | GNU Octave (**только ядро**, без пакетов `io`/`statistics`: свой JSON/CSV/статистика): пайплайн + `bin/selftest.m` |
-| `vba/` | VBA 7 (Microsoft Excel 2016+, **без надстроек и COM-объектов**: свой JSON/CSV/статистика, один вызов Win32 ради UTC): модули `.bas` импортируются в книгу через COM, `build_vba.ps1` с режимами `-Vectors` / `-Test` / `-Pipeline` |
-| `legacy/` | Легаси-методы (детектор v3, ручной очиститель) — только для воспроизведения старых измерений |
-| `verify_all.ps1` | Одна команда: ворота всех реализаций (векторы, тесты, пайплайн, сверка) |
-| `tools/` | `verify_all.py` — те же ворота без PowerShell (Linux/macOS/Git Bash): та же таблица портов, команды выбираются по ОС; см. `tools/README.md` |
+## Porting to a new language
 
-## Портирование в новый язык
+The order that has been exercised on 16 implementations:
 
-Порядок, отработанный на 16 реализациях:
+1. read [`docs/method.md`](docs/method.md) — §11 lists the pitfalls real ports
+   tripped over (half rounding, residual sign, indexing, coefficient order,
+   percentiles, ring windows, number formatting);
+2. compare the document structure against `spec/pappa.schema.json` and validate it
+   with `python spec/check_schema.py <port folder>`;
+3. pass `spec/conformance` (4 vectors: a model without pits, a model with pits,
+   the detector, cleaning) — your own `conformance` utility, code 0/1/2;
+4. implement the pipeline (`--input/--out-dir/--name`) and compare the sample
+   folder against the reference: `python python/studies/verify_port.py`;
+5. add your own tests/`selftest` and a `build_<language>.ps1` with the modes
+   `-Vectors`, `-Test`, `-Pipeline` — then `verify_all.ps1` picks the port up (one
+   row in the port table).
 
-1. прочитать [`docs/method.md`](docs/method.md) — §11 перечисляет ловушки, на
-   которых спотыкались реальные порты (округление половины, знак остатка,
-   индексация, порядок коэффициентов, процентили, кольцевые окна, формат чисел);
-2. сверить структуру документов со `spec/pappa.schema.json` и проверить их
-   `python spec/check_schema.py <папка порта>`;
-3. пройти `spec/conformance` (4 вектора: модель без ям, модель с ямами, детектор,
-   очистка) — своя утилита `conformance`, код 0/1/2;
-4. реализовать пайплайн (`--input/--out-dir/--name`) и сверить папку образца с
-   референсом: `python python/studies/verify_port.py`;
-5. добавить свои тесты/`selftest` и `build_<язык>.ps1` с режимами `-Vectors`,
-   `-Test`, `-Pipeline` — тогда порт подхватывается `verify_all.ps1` (одна строка
-   в таблице портов).
+## Citation
 
-## Цитирование
+The file [`CITATION.cff`](CITATION.cff) — GitHub will show the “Cite this
+repository” link automatically.
 
-Файл [`CITATION.cff`](CITATION.cff) — GitHub покажет ссылку «Cite this
-repository» автоматически.
+## Documentation languages
+
+English is the canonical language: `README.md`, `docs/method.md`. Translations
+live next to their original with a language suffix — `README.ru.md`,
+`docs/method.ru.md` (`<name>.<lang>.md`, ISO 639-1). Every localized file starts
+with a language switcher line and must keep the section structure of the original;
+`python tools/check_docs_i18n.py` checks exactly that. Adding a language means
+adding `README.<lang>.md` and (optionally) `docs/method.<lang>.md` — nothing else
+in the repository changes.
 
 ## License
 
@@ -325,4 +343,3 @@ condition takes precedence over the MIT permissions where they conflict):
 
 Because of this restriction the project is **source-available, not OSI open
 source**. Everything else (rights, warranty disclaimer, liability) is plain MIT.
-

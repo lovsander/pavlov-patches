@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/lovsander/pavlov-patches/spec/pappa.schema.json",
   "title": "PAPPA section document (pappa v2.0)",
-  "description": "Документ описания ОДНОГО сечения: раскладка патчей, коэффициенты, члены фичера ям. Пишется любым портом, читается любым языком. Контракт: docs/method.md §10, структурный источник — python/pappa/io/model_file.py. Документы предшественников (pmodel v1.0, appa v2.0) читаются слоем совместимости референса, но НЕ описываются этой схемой.",
+  "description": "Документ описания ОДНОГО сечения: раскладка патчей, коэффициенты, члены фичера ям. Пишется любым портом, читается любым языком. Контракт: docs/method.ru.md §10, структурный источник — python/pappa/io/model_file.py. Документы предшественников (pmodel v1.0, appa v2.0) читаются слоем совместимости референса, но НЕ описываются этой схемой.",
   "type": "object",
   "required": ["format", "version", "method", "created", "software", "meta", "global", "patches"],
   "additionalProperties": false,

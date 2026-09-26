@@ -1,6 +1,6 @@
 # Spec
 
-Language-independent contract of **PAPPA** (Piecewise Adaptive Poly-Patch
+Независимый от языка контракт **PAPPA** (Piecewise Adaptive Poly-Patch
 Approximation):
 
 - `pappa.schema.json` — JSON Schema (draft 2020-12) документа описания сечения
@@ -20,19 +20,19 @@ Approximation):
   Коды: `0` — всё сошлось, `1` — нарушения, `2` — нечего проверять.
   Проверено на всех папках образцов всех портов (22 папки × 10 сечений + манифесты
   = 242 файла).
-- `conformance/` — golden vectors (`input -> expected output`) used to verify
-  every language port against the reference implementation;
-  see `conformance/README.md` for the vector format and tolerances.
+- `conformance/` — golden-векторы (`input -> expected output`), по которым каждый
+  языковой порт проверяется против референса; формат векторов и допуски — в
+  `conformance/README.md`.
 
 Документы форматов-предшественников (`pmodel v1.0`, `appa v2.0`) читаются слоем
 совместимости референса, но этими схемами **не** описываются: схемы фиксируют
 только текущий формат `pappa v2.0`.
 
-A port is considered correct when it reproduces all conformance vectors within
-the documented tolerance and (for the full pipeline) matches the reference sample
-folder numerically (curve 1e-6 mm; see docs/method.md §11).
+Порт считается корректным, когда он воспроизводит все конформанс-векторы в
+пределах задокументированного допуска и (для полного пайплайна) численно совпадает
+с папкой образца референса (контур 1e-6 мм; см. [`docs/method.ru.md`](../docs/method.ru.md) §11).
 
-Tools:
+Инструменты:
 
 | Что | Чем |
 |-----|-----|
@@ -43,8 +43,8 @@ Tools:
 | Сверить порт с референсом на образце | `python python/studies/verify_port.py` |
 | Всё сразу, по всем портам | `powershell -File verify_all.ps1 [-Full]` |
 
-A sample folder (`samples/<name>/`) is the unit of exchange: `sample.json`
-manifest + one `pappa.json` document per section + `report/verify.json` with the
-numeric check of the port.
+Единица обмена — папка образца (`samples/<name>/`): манифест `sample.json` +
+по одному документу `pappa.json` на сечение + `report/verify.json` с численной
+проверкой порта.
 
 
