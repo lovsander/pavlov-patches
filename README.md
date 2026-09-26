@@ -35,6 +35,21 @@ Swift, Julia, R, GNU Octave, VBA 7 (Microsoft Excel). Каждая —
 полный пайплайн «CSV → папка образца», свои ворота (векторы + тесты) и запись
 документов по общему контракту.
 
+## Как это выглядит
+
+![метод изнутри: патчи, веса, ошибка](docs/assets/method_patches.png)
+
+![сравнение с усечённым рядом Фурье](docs/assets/method_vs_fourier.png)
+
+![сравнение с локальной полиномиальной регрессией](docs/assets/method_vs_lpr.png)
+
+![детектор трещин band](docs/assets/method_detector.png)
+
+Все четыре рисунка собираются одной командой —
+`python python/studies/make_method_figures.py` — и она же печатает числа, которые
+попадают в текст: таблица ошибок, степени патчей, центры найденных ям (см.
+[`docs/method.md`](docs/method.md) §14, там же честное чтение сравнения с LPR).
+
 ## Статус и границы применимости
 
 Intended application: in-process geometry of **bodies of revolution** measured by
