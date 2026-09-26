@@ -909,76 +909,90 @@ def report_datums(data, span_name):
 
 # --- рисунок ----------------------------------------------------------------
 
-def plot_ends(data, span_name="B 240° трещина у края", sid=0,
-              out="open_shapes_ends.png"):
+# Полоса = сечение, 6 штук по 3 в ряд. Берутся обе ветви трещины: у сечений
+# 0..6 дно ямы уходит от 92° к 102°, т.е. 22-32° от левого реза участка B, а у
+# сечений 7..9 оно перескакивает на ~300°, т.е. к правому резу.
+PLOT_SECTIONS = [0, 2, 4, 6, 7, 9]
+PLOT_SPAN = "B 240° трещина у края"
+PLOT_BOUNDARY = dict(boundary="clamp_vd", deg_bonus=1)   # домен 1.00, край ~датум
+PLOT_LABEL = "clamp_vd+deg+2"
+
+
+def plot_sections(data, sections=PLOT_SECTIONS, span_name=PLOT_SPAN,
+                  boundary=None, out="open_shapes_ends.png"):
     """
-    Три панели: что видно глазом у реза; где живёт ошибка по длине; сколько
-    стоит каждый вариант привязки (max хвост).
+    Шесть сечений (3 в ряд) на участке B: в каждой полосе ТОЛЬКО данные и
+    модель — по одному сечению на панель, чтобы форма читалась.
+
+    Полос ровно две (данные, модель) и обе тонкие штриховые: кривые ошибок,
+    столбики и сравнение вариантов привязки на рисунке не рисуются, невязка
+    идёт ЦИФРОЙ в легенду (RMSE, max и |Δr| на обоих резах, плюс шум самих
+    данных к истине — чтобы цифру модели было с чем сравнить). Полоса втрое
+    длиннее прежней панели (7.5" против 5.2"): сечение — длинная кривая, на
+    почти квадратной панели яма выглядит точкой.
     """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    case = prepare(data[sid], *SPANS[span_name])
+    kw = dict(PLOT_BOUNDARY if boundary is None else boundary)
     a0, a1 = SPANS[span_name]
-    zoom = case["grid_a"] <= a0 + 0.25 * (a1 - a0)
-    variants = {"free": dict(boundary="free"),
-                "clamp_vd": dict(boundary="clamp_vd"),
-                "mirror_odd": dict(boundary="mirror_odd")}
-    fig, axes = plt.subplots(1, 3, figsize=(15.5, 4.4))
+    n_cols = 3
+    n_rows = int(np.ceil(len(sections) / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(24.0, 6.4))
+    axes = np.atleast_1d(axes).ravel()
 
-    ax = axes[0]
-    ax.plot(case["grid_a"], case["truth"], color="0.25", lw=2.4,
-            label="истина генератора")
-    for label, kw in variants.items():
+    for i, (ax, sid) in enumerate(zip(axes, sections)):
+        sec = data[sid]
+        case = prepare(sec, a0, a1)
         ap = OpenPatches(**kw).fit(case["t"], case["r"])
-        model = ap.predict(case["grid_t"])
-        ax.plot(case["grid_a"][zoom], model[zoom], lw=1.4, label=label)
-    ax.axvline(a0, color="crimson", ls="--", lw=1.0, label="рез (край скана)")
-    ax.set_xlabel("угол скана, °")
-    ax.set_ylabel("r, мм")
-    ax.set_title(f"у левого реза, сечение {sid}\n({span_name})")
-    ax.legend(fontsize=8)
-    ax.grid(alpha=0.25)
+        st, model = metrics_for(case, ap)
 
-    ax = axes[1]
-    for label, kw in variants.items():
-        ap = OpenPatches(**kw).fit(case["t"], case["r"])
-        model = ap.predict(case["grid_t"])
-        ax.plot(case["grid_t"], np.abs(model - case["truth"]), lw=1.3, label=label)
-    ax.axvspan(0.0, 0.05, color="crimson", alpha=0.12)
-    ax.axvspan(0.95, 1.0, color="crimson", alpha=0.12)
-    ax.set_xlabel("нормированная длина t")
-    ax.set_ylabel("|Δr|, мм")
-    ax.set_title("где живёт ошибка по длине\n(красное — крайние 5% длины)")
-    ax.legend(fontsize=8)
-    ax.grid(alpha=0.25)
+        # Шум этих же точек: невязка данных к истине генератора (планка, ниже
+        # которой невязка модели опуститься не может — это те же измерения).
+        truth_pts = open_interp(sec["angles"], sec["ideal"], case["a"])
+        noise = float(np.sqrt(np.mean((case["r"] - truth_pts) ** 2)))
+        # Дно ямы — по истине всего сечения (участок может резать яму краем).
+        i_min = int(np.argmin(sec["ideal"]))
+        a_min = float(sec["angles"][i_min])
+        depth = float(np.max(sec["ideal"]) - sec["ideal"][i_min])
 
-    ax = axes[2]
-    cases = cases_for(data, span_name)
-    labels, vals = [], []
-    for label, kw in VARIANTS.items():
-        sts = []
-        for c in cases.values():
-            ap = OpenPatches(**kw).fit(c["t"], c["r"])
-            st, _ = metrics_for(c, ap)
-            sts.append(st)
-        labels.append(label)
-        vals.append(aggregate(sts)["max_end"])
-    y = np.arange(len(labels))
-    ax.barh(y, vals, color=["#c44" if v > 0.05 else "#4a7" for v in vals])
-    ax.set_yticks(y)
-    ax.set_yticklabels(labels, fontsize=8)
-    ax.invert_yaxis()
-    ax.axvline(0.05, color="0.3", ls=":", lw=1.0, label="0.05 мм")
-    ax.set_xlabel("max |Δr| в крайних 5% длины, мм")
-    ax.set_title("цена варианта привязки\n(среднее по 4 сечениям)")
-    ax.legend(fontsize=8)
-    ax.grid(alpha=0.25, axis="x")
+        ax.plot(case["a"], case["r"], lw=0.6, ls=(0, (4, 2)), color="0.5",
+                alpha=0.45,
+                label=f"данные, {len(case['a'])} точек: "
+                      f"RMSE к истине {noise:.3f} мм")
+        ax.plot(case["grid_a"], model, lw=1.0, ls=(0, (7, 3)), color="#c0392b",
+                label=f"модель: N={N_PATCHES} патчей, {PLOT_LABEL} — "
+                      f"RMSE {st['rmse']:.4f}, max {st['max']:.4f} мм\n"
+                      f"   на резах |Δr|: L {st['drift_lo']:.4f}, "
+                      f"R {st['drift_hi']:.4f} мм")
 
-    fig.tight_layout()
+        ax.set_xlim(a0 - 1.0, a1 + 1.0)
+        lo = float(min(case["r"].min(), np.nanmin(model))) - 0.10
+        hi = float(max(case["r"].max(), np.nanmax(model))) + 0.10
+        ax.set_ylim(lo, hi)
+        ax.set_title(f"сечение {sid} · высота {sec['height_mm']:g} мм · "
+                     f"яма {depth:.2f} мм на {a_min:.0f}° · "
+                     f"резы {a0:g}° и {a1:g}°", fontsize=10.0, pad=3.5)
+        ax.set_ylabel("r, мм", fontsize=9.5)
+        if i // n_cols == n_rows - 1:
+            ax.set_xlabel("угол скана, °", fontsize=9.5)
+        ax.tick_params(labelsize=8.5)
+        ax.grid(alpha=0.25, lw=0.4)
+        # легенда уходит от ямы: яма слева у сечений 0..6 и справа у 7..9
+        ax.legend(fontsize=8.5, framealpha=0.85,
+                  loc="lower right" if a_min < 0.5 * (a0 + a1) else "lower left")
+
+    fig.suptitle(
+        f"РАЗОМКНУТЫЕ ФОРМЫ: 6 сечений на открытом участке B [{a0:g}°, {a1:g}°] "
+        f"— данные и модель, невязка цифрой в легенде\n"
+        f"N={N_PATCHES} патчей, степень {DEG_MIN}..{DEG_MAX} по «локтю», "
+        f"привязка концов {PLOT_LABEL} (домен 1.00, резы — границы полосы; "
+        f"невязка в легенде — по своему сечению, а не среднее)",
+        fontsize=13)
+    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.94), h_pad=2.0)
     path = resolve_plot(out)
-    fig.savefig(path, dpi=130)
+    fig.savefig(path, dpi=160)
     plt.close(fig)
     print(f"\nРисунок: {path}")
 
@@ -1001,7 +1015,7 @@ def main():
     report_pavlovness(data, "A 240° трещина внутри")
     report_gauge(data, "A 240° трещина внутри")
     report_datums(data, "B 240° трещина у края")
-    plot_ends(data)
+    plot_sections(data)
 
 
 if __name__ == "__main__":
